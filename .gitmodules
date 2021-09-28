@@ -1,0 +1,12 @@
+[submodule "darknet"]
+	path = darknet
+	url = https://github.com/veracruz-project/darknet
+	branch = veracruz
+[submodule "openh264"]
+	path = openh264
+	url = https://github.com/veracruz-project/openh264
+	branch = veracruz
+[submodule "openh264-dec"]
+	path = openh264-dec
+	url = https://github.com/veracruz-project/openh264-dec
+	branch = veracruz
