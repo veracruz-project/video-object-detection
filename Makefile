@@ -15,6 +15,8 @@ EXEC=detector.wasm
 DARKNET_PATH = darknet
 OPENH264_LIB_PATH = openh264
 OPENH264DEC_LIB_PATH = openh264-dec
+MBEDCRYPTO_LIB_PATH = mbedtls/library
+MBEDTLS_INCLUDE_PATH = mbedtls/include
 VPATH=./$(DARKNET_PATH)
 OBJ=wasm
 
@@ -57,8 +59,8 @@ all: $(EXEC)
 
 
 ##########################################################
-$(EXEC): $(DARKNET_OBJS) $(MAIN_SRCS) libopenh264_wasm.a libopenh264dec_wasm.a
-	$(CXX) $(CFLAGS) $(DARKNET_OBJS) $(MAIN_SRCS) -o $@ $(LDFLAGS) -Iinclude -I$(DARKNET_PATH) -I $(OPENH264_LIB_PATH)/codec/api/svc -I $(OPENH264DEC_LIB_PATH)/inc -L $(OPENH264DEC_LIB_PATH) -lopenh264dec_wasm -L $(OPENH264_LIB_PATH) -lopenh264_wasm
+$(EXEC): $(DARKNET_OBJS) $(MAIN_SRCS) libopenh264_wasm.a libopenh264dec_wasm.a libmbedcrypto_wasm.a
+	$(CXX) $(CFLAGS) $(DARKNET_OBJS) $(MAIN_SRCS) -o $@ $(LDFLAGS) -Iinclude -I$(DARKNET_PATH) -I $(OPENH264_LIB_PATH)/codec/api/svc -I $(OPENH264DEC_LIB_PATH)/inc -I $(MBEDTLS_INCLUDE_PATH) -L $(OPENH264DEC_LIB_PATH) -lopenh264dec_wasm -L $(OPENH264_LIB_PATH) -lopenh264_wasm -L $(MBEDCRYPTO_LIB_PATH) -lmbedcrypto_wasm
 
 $(DARKNET_PATH)/%.$(OBJ): %.c
 	$(CC) $(CFLAGS) -I$(DARKNET_PATH) -Iinclude -c $< -o $@
@@ -68,6 +70,9 @@ libopenh264_wasm.a:
 
 libopenh264dec_wasm.a:
 	make -C $(OPENH264DEC_LIB_PATH)
+
+libmbedcrypto_wasm.a:
+	make -C $(MBEDCRYPTO_LIB_PATH) libmbedcrypto_wasm.a
 
 
 ##########################################################
