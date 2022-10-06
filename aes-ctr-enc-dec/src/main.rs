@@ -99,10 +99,8 @@ fn main() -> anyhow::Result<()> {
         )?;
 
         let block_size = cipher.block_size();
-        let padded_size = std::cmp::max(
-            2 * block_size,
-            (input.len() + block_size - 1) / block_size * block_size,
-        );
+        let padded_size = (input.len() + 2 * block_size - 1) / block_size * block_size;
+
         output.resize(padded_size, 0);
 
         cipher
@@ -136,10 +134,7 @@ fn main() -> anyhow::Result<()> {
         )?;
 
         let block_size = cipher.block_size();
-        let padded_size = std::cmp::max(
-            2 * block_size,
-            (input.len() + block_size - 1) / block_size * block_size,
-        );
+        let padded_size = (input.len() + 2 * block_size - 1) / block_size * block_size;
         output.resize(padded_size, 0);
 
         cipher
