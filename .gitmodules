@@ -10,3 +10,7 @@
 	path = openh264-dec
 	url = https://github.com/veracruz-project/openh264-dec
 	branch = veracruz
+[submodule "mbedtls"]
+	path = mbedtls
+	url = https://github.com/veracruz-project/mbedtls
+	branch = wasm
