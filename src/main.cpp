@@ -1,9 +1,11 @@
 /*
 This file contains the main functions for performing object detection.
-First, the object detection model is loaded, then the video decoder executes
-until every frame in the video is decoded.
+First, the input video is decrypted by the AES native module, then the object
+detection model is loaded, then the video decoder executes until every frame in
+the video is decoded.
 A callback is configured to be called whenever a frame is available, whereupon
-it is fed to the object detection model which outputs a prediction.
+it is fed to the object detection model which outputs a prediction and
+optionally saves it to disk.
 
 AUTHORS
 
@@ -13,7 +15,7 @@ COPYRIGHT AND LICENSING
 
 See the `LICENSE_MIT.markdown` file in the example's root directory for
 copyright and licensing information.
-Based on darknet, YOLO LICENSE https://github.com/pjreddie/darknet/blob/master/LICENSE
+Based on Darknet, YOLO LICENSE https://github.com/pjreddie/darknet/blob/master/LICENSE
 */
 
 extern "C"
@@ -22,13 +24,20 @@ extern "C"
 }
 #include "codec_def.h"
 #include "h264dec.h"
+#include "mbedtls/cipher.h"
 #include "utils.h"
 
 #include <string.h>
 
 
+/* Cipher's key length in bits */
+unsigned int KEY_LENGTH = 128;
+
+/* Cipher's block size in bits */
+unsigned int BLOCK_SIZE = 128;
+
 /* Keep track of the number of frames processed */
-int frames_processed = 0;
+unsigned int frames_processed = 0;
 
 /* Network state, to be initialized by `init_darknet_detector()` */
 char **names;
@@ -138,7 +147,7 @@ void on_frame_ready(SBufferInfo *bufInfo)
 
     im = load_image_from_raw_yuv(bufInfo);
 
-    // Resize image to fit the darknet model
+    // Resize image to fit the Darknet model
     im_sized = letterbox_image(im, net->w, net->h);
 
     printf("Image normalized and resized: %lf seconds\n",
@@ -155,12 +164,111 @@ void on_frame_ready(SBufferInfo *bufInfo)
     frames_processed++;
 }
 
+int decrypt_video(char *encrypted_video_path, char *decrypted_video_path, char *key_path, char *iv_path)
+{
+    FILE *f;
+    size_t n;
+    long input_file_size;
+    unsigned char key[KEY_LENGTH / 8];
+    unsigned char iv[BLOCK_SIZE / 8];
+    unsigned char *input_buffer, *output_buffer;
+    size_t output_len;
+
+	// Read key
+    f = fopen(key_path, "r");
+    if (f == NULL) {
+        printf("Couldn't open %s\n", key_path);
+        return 1;
+    }
+    n = fread(key, sizeof(key), 1, f);
+    if (n != 1) {
+        printf("Invalid key length. Should be %d bits long\n", KEY_LENGTH);
+        return 1;
+    }
+    fclose(f);
+
+	// Read IV
+    f = fopen(iv_path, "r");
+    if (f == NULL) {
+        printf("Couldn't open %s\n", iv_path);
+        return 1;
+    }
+    n = fread(iv, sizeof(iv), 1, f);
+    if (n != 1) {
+        printf("Invalid IV length. Should be %d bits long\n", BLOCK_SIZE);
+        return 1;
+    }
+    fclose(f);
+
+    // Determine input file size
+    f = fopen(encrypted_video_path, "r");
+    if (f == NULL) {
+        printf("Couldn't open %s\n", encrypted_video_path);
+        return 1;
+    }
+    fseek(f, 0L, SEEK_END);
+    input_file_size = ftell(f);
+    rewind(f);
+
+    // Allocate input buffer the size of the input file
+    input_buffer = (unsigned char *) malloc(input_file_size);
+
+    // Read input file
+    n = fread(input_buffer, input_file_size, 1, f);
+    if (n != 1) {
+        printf("Failure reading %s\n", encrypted_video_path);
+        return 1;
+    }
+    fclose(f);
+
+    // Allocate output buffer the size of the input buffer (can't be longer than
+    // that due to padding)
+    output_buffer = (unsigned char *) malloc(input_file_size);
+
+    // Initialize decryption context and decrypt buffer
+    mbedtls_cipher_context_t ctx;
+    mbedtls_cipher_type_t type = MBEDTLS_CIPHER_AES_128_CTR;
+    mbedtls_cipher_init(&ctx);
+    mbedtls_cipher_setup(&ctx, mbedtls_cipher_info_from_type(type));
+    mbedtls_cipher_setkey(&ctx, key, KEY_LENGTH, MBEDTLS_DECRYPT);
+    mbedtls_cipher_crypt(&ctx, iv, BLOCK_SIZE / 8, input_buffer, input_file_size, output_buffer, &output_len);
+
+    free(input_buffer);
+
+    // Write result to `decrypted_video_path`
+    f = fopen(decrypted_video_path, "w");
+    if (f == NULL) {
+        printf("Couldn't open %s\n", decrypted_video_path);
+        return 1;
+    }
+    n = fwrite(output_buffer, output_len, 1, f);
+    if (n != 1) {
+        printf("Failure writing %s\n", decrypted_video_path);
+        return 1;
+    }
+    fclose(f);
+
+    free(output_buffer);
+
+    return 0;
+}
+
 /* Run the object detection model on each decoded frame */
 int main(int argc, char **argv)
 {
     double time;
-    char *input_file = "video_input/in.h264";
+    char *encrypted_video_path = "input/in_enc.h264";
+    char *decrypted_video_path = "internal/in.h264";
+    char *key_path = "input/key";
+    char *iv_path = "input/iv";
 
+    // Decrypt input video
+    if (decrypt_video(encrypted_video_path, decrypted_video_path, key_path, iv_path) != 0) {
+        printf("Couldn't decrypt %s\n", encrypted_video_path);
+        return 1;
+    }
+
+	// Initialize Darknet
     printf("Initializing detector...\n");
     time  = what_time_is_it_now();
 	// XXX: Box annotation is temporarily disabled until we find a way to
@@ -170,11 +278,12 @@ int main(int argc, char **argv)
     printf("Arguments loaded and network parsed: %lf seconds\n",
                 what_time_is_it_now() - time);
 
+    // Decode video and run object detection on each frame
     printf("Starting decoding...\n");
     time  = what_time_is_it_now();
-    int x = h264_decode(input_file, "", false, &on_frame_ready);
+    int x = h264_decode(decrypted_video_path, "", false, &on_frame_ready);
     printf("Finished decoding: %lf seconds\n",
-                what_time_is_it_now() - time);
+           what_time_is_it_now() - time);
 
     return x;
 }
