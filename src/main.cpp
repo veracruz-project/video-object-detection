@@ -257,10 +257,10 @@ int decrypt_video(char *encrypted_video_path, char *decrypted_video_path, char *
 int main(int argc, char **argv)
 {
     double time;
-    char *encrypted_video_path = "input/in_enc.h264";
-    char *decrypted_video_path = "internal/in.h264";
-    char *key_path = "input/key";
-    char *iv_path = "input/iv";
+    char *encrypted_video_path = "s3_app_input/in_enc.h264";
+    char *decrypted_video_path = "program_internal/in.h264";
+    char *key_path = "user_input/key";
+    char *iv_path = "user_input/iv";
 
     // Decrypt input video
     if (decrypt_video(encrypted_video_path, decrypted_video_path, key_path, iv_path) != 0) {
