@@ -99,8 +99,10 @@ fn main() -> anyhow::Result<()> {
         )?;
 
         let block_size = cipher.block_size();
-        let padded_size = (input.len() + 2 * block_size - 1) / block_size * block_size;
-
+        // Mbed TLS requires the output buffer to be at least
+        // `ilen + block_size` long.
+        // Cf. the documentation of `mbedtls_cipher_update()`
+        let padded_size = input.len() + block_size;
         output.resize(padded_size, 0);
 
         cipher
@@ -134,7 +136,10 @@ fn main() -> anyhow::Result<()> {
         )?;
 
         let block_size = cipher.block_size();
-        let padded_size = (input.len() + 2 * block_size - 1) / block_size * block_size;
+        // Mbed TLS requires the output buffer to be at least
+        // `ilen + block_size` long.
+        // Cf. the documentation of `mbedtls_cipher_update()`
+        let padded_size = input.len() + block_size;
         output.resize(padded_size, 0);
 
         cipher
