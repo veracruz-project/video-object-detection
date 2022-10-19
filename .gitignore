@@ -1,9 +1,10 @@
-/data/labels/*.png
-
-/predictions.jpg
-
-/model/yolov3-tiny.weights
-/model/yolov3.weights
+*.png
+*.jpg
+*.pem
+*.json
+*.log
+/program_data/yolov3-tiny.weights
+/program_data/yolov3.weights
 /obj/
 /.vscode/
 *.wasm
