@@ -1,6 +1,6 @@
 # Video object detection example
 
-This example combines and integrates two simpler examples, the video decoder and the [deep learning server](https://github.com/veracruz-project/veracruz-examples/tree/main/deep-learning-server).
+This example combines and integrates two simpler examples, the video decoder and the [deep learning server](https://github.com/veracruz-project/veracruz-examples/tree/main/deep-learning-server).  
 The video decoder uses [`openh264`](https://github.com/veracruz-project/openh264) to decode an H264 video into individual frames, which are converted to RGB and made palatable to an object detector built on top of the [Darknet neural network framework](https://github.com/veracruz-project/darknet). The output is a list of detected objects, associated with their detection probability, and an optional prediction image showing each detected object in a bounding box.
 
 ## Build
@@ -27,20 +27,23 @@ The video decoder uses [`openh264`](https://github.com/veracruz-project/openh264
   ffmpeg -i in.mp4 -map 0:0 -vcodec copy -an -f h264 in.h264
   ```
 
-## Execution outside Veracruz
-* The program is expecting the following file tree that must be mirrored on the executing machine:
+## File tree
+* The program is expecting the following file tree:
   ```
-  + output/
-  + program_data/
-  +-- coco.names
-  +-- labels/ (optional)
+  + output/           (prediction images outputted by the program)
+  + program_data/     (data read by the program)
+  +-- coco.names      (list of detectable objects)
+  +-- labels/         (alphabet (optional))
   +---- *.png
-  +-- yolov3.cfg
-  +-- yolov3.weights
+  +-- yolov3.cfg      (configuration)
+  +-- yolov3.weights  (model)
   + video_input/
-  +-- in.h264
+  +-- in.h264         (H264 video)
   ```
-* There are several ways to run the program outside Veracruz. In any case the prediction images can be found under `./output/`
+
+## Execution outside Veracruz
+Running the program outside Veracruz is useful to validate the program without considering the policy and the TEE backend it runs on.  
+There are several ways to do that. In any case the [file tree](#file-tree) must be mirrored on the executing machine.
 
 ### As a native binary
 * Build as a native binary:
@@ -52,20 +55,22 @@ The video decoder uses [`openh264`](https://github.com/veracruz-project/openh264
    ./detector
    ```
 
-### In `wasmtime`
+### As a WebAssembly binary in `wasmtime`
 * Install [`wasmtime`](https://github.com/bytecodealliance/wasmtime)
 * Run:
   ```
   wasmtime --dir=. detector.wasm
   ```
 
-### In the [`freestanding execution engine`](https://github.com/veracruz-project/veracruz/tree/main/sdk/freestanding-execution-engine):
+### As a WebAssembly binary in the [`freestanding execution engine`](https://github.com/veracruz-project/veracruz/tree/main/sdk/freestanding-execution-engine)
 * Run:
   ```
   RUST_LOG=info RUST_BACKTRACE=1 freestanding-execution-engine -i video_input program program_data -o output -p program/detector.wasm -x jit -c -d -e
   ```
 
 ## End-to-end Veracruz deployment
+An application (program, data and policy) can't be validated until the program and data are provisioned by a Veracruz client to the Runtime Manager, the policy gets verified and the program successfully executes within the enclave.  
+The crux of an end-to-end deployment is to get the policy file right. To that end, a collection of deployment script are provided and take care of generating the certificates and the policy based on the program's [file tree](#file-tree).
 * [Build Veracruz](https://github.com/veracruz-project/veracruz/blob/main/BUILD_INSTRUCTIONS.markdown)
-* Depending on your environment, run `./deploy_vod_big_linux.sh` or `./deploy_vod_big_nitro.sh` to generate the certificates and the policy, deploy the Veracruz components and run the computation
+* Depending on your environment, run `./deploy_vod_big_linux.sh` or `./deploy_vod_big_nitro.sh` to generate the policy, deploy the Veracruz components and run the computation
 * The prediction images can be found in the executing directory
