@@ -18,5 +18,6 @@ Based on darknet, YOLO LICENSE https://github.com/pjreddie/darknet/blob/master/L
 #define CHANNELS 3
 
 image load_image_from_raw_yuv(SBufferInfo *bufInfo);
+image **load_alphabet_from_path(const char *label_path);
 
 #endif

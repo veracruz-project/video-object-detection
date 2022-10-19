@@ -154,3 +154,20 @@ image load_image_from_raw_yuv(SBufferInfo *bufInfo)
 
     return im;
 }
+
+image **load_alphabet_from_path(const char *label_path)
+{
+    int i, j;
+    const int nsize = 8;
+    image **alphabets = (image **) calloc(nsize, sizeof(image));
+    for(j = 0; j < nsize; ++j){
+        alphabets[j] = (image *) calloc(128, sizeof(image));
+        for(i = 32; i < 127; ++i){
+            char buff[256];
+            sprintf(buff, label_path, i, j);
+            alphabets[j][i] = load_image_color(buff, 0, 0);
+        }
+    }
+    return alphabets;
+}
+

@@ -56,9 +56,9 @@ void init_darknet_detector(char *name_list_file, char *cfgfile,
 
     // Load alphabet (set of images corresponding to symbols). It is used to
     // write the labels next to the detection boxes. Try to load symbols from
-    // `data/labels/<symbol_index>_<symbol_size>.png`
+    // `program_data/labels/<symbol_index>_<symbol_size>.png`
     if (annotate_boxes)
-        alphabet = load_alphabet();
+        alphabet = load_alphabet_from_path("program_data/labels/%d_%d.png");
 }
 
 /* Feed an image to the object detection model.
@@ -158,12 +158,14 @@ void on_frame_ready(SBufferInfo *bufInfo)
 int main(int argc, char **argv)
 {
     double time;
-    char *input_file = "input/in.h264";
+    char *input_file = "video_input/in.h264";
 
     printf("Initializing detector...\n");
     time  = what_time_is_it_now();
-    init_darknet_detector("input/coco.names", "input/yolov3.cfg",
-                          "input/yolov3.weights", false);
+	// XXX: Box annotation is temporarily disabled until we find a way to
+	// efficiently provision a batch of files to the enclave (file archive?)
+    init_darknet_detector("program_data/coco.names", "program_data/yolov3.cfg",
+                          "program_data/yolov3.weights", false);
     printf("Arguments loaded and network parsed: %lf seconds\n",
                 what_time_is_it_now() - time);
 
