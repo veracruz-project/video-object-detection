@@ -263,6 +263,7 @@ int main(int argc, char **argv)
     char *iv_path = "user_input/iv";
 
     // Decrypt input video
+    printf("Decrypting video...\n");
     if (decrypt_video(encrypted_video_path, decrypted_video_path, key_path, iv_path) != 0) {
         printf("Couldn't decrypt %s\n", encrypted_video_path);
         return 1;
