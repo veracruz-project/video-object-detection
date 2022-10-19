@@ -1,7 +1,7 @@
-# Video object detection example
+# Video object detection demo for IoTeX
 
-This example combines and integrates two simpler examples, the video decoder and the [deep learning server](https://github.com/veracruz-project/veracruz-examples/tree/main/deep-learning-server).  
-The video decoder uses [`openh264`](https://github.com/veracruz-project/openh264) to decode an H264 video into individual frames, which are converted to RGB and made palatable to an object detector built on top of the [Darknet neural network framework](https://github.com/veracruz-project/darknet). The output is a list of detected objects, associated with their detection probability, and an optional prediction image showing each detected object in a bounding box.
+This program combines and integrates two simpler examples, the video decoder and the [deep learning server](https://github.com/veracruz-project/veracruz-examples/tree/main/deep-learning-server).
+The video decoder uses [`Mbed TLS`](https://github.com/veracruz-project/mbedtls/) to decrypt an H264 video, then uses [`openh264`](https://github.com/veracruz-project/openh264) to decode the video into individual frames, which are converted to RGB and made palatable to an object detector built on top of the [Darknet neural network framework](https://github.com/veracruz-project/darknet). The output is a list of detected objects, associated with their detection probability, and an optional prediction image showing each detected object in a bounding box.
 
 ## Build
 * Install [`wasi sdk 14`](https://github.com/WebAssembly/wasi-sdk) and set `WASI_SDK_ROOT` to point to its installation directory
@@ -27,6 +27,13 @@ The video decoder uses [`openh264`](https://github.com/veracruz-project/openh264
   ffmpeg -i in.mp4 -map 0:0 -vcodec copy -an -f h264 in.h264
   ```
 
+## Encrypt the video and export the keying material
+* Go to `aes-ctr-enc-dec/` and run the encryption program (it gets automatically built):
+  ```
+  cargo run <path to H264 video> <path to encrypted video> <key path> <iv path> -e
+  ```
+* The video gets encrypted with the freshly generated keying material (key, IV)
+
 ## File tree
 * The program is expecting the following file tree:
   ```
@@ -37,8 +44,12 @@ The video decoder uses [`openh264`](https://github.com/veracruz-project/openh264
   +---- *.png
   +-- yolov3.cfg      (configuration)
   +-- yolov3.weights  (model)
-  + video_input/
-  +-- in.h264         (H264 video)
+  + program_internal/ (directory used internally by the program)
+  + s3_app_input/
+  +-- in_enc.h264     (encrypted H264 video)
+  + user_input/       (keying material to decrypt the video)
+  +-- iv
+  +-- key
   ```
 
 ## Execution outside Veracruz
@@ -65,7 +76,7 @@ There are several ways to do that. In any case the [file tree](#file-tree) must 
 ### As a WebAssembly binary in the [`freestanding execution engine`](https://github.com/veracruz-project/veracruz/tree/main/sdk/freestanding-execution-engine)
 * Run:
   ```
-  RUST_LOG=info RUST_BACKTRACE=1 freestanding-execution-engine -i video_input program program_data -o output -p program/detector.wasm -x jit -c -d -e
+  RUST_LOG=info RUST_BACKTRACE=1 freestanding-execution-engine -i program program_data program_internal s3_app_input user_input -o output program_internal -p program/detector.wasm -x jit -c -d -e
   ```
 
 ## End-to-end Veracruz deployment
@@ -74,3 +85,6 @@ The crux of an end-to-end deployment is to get the policy file right. To that en
 * [Build Veracruz](https://github.com/veracruz-project/veracruz/blob/main/BUILD_INSTRUCTIONS.markdown)
 * Depending on your environment, run `./deploy_vod_big_linux.sh` or `./deploy_vod_big_nitro.sh` to generate the policy, deploy the Veracruz components and run the computation
 * The prediction images can be found in the executing directory
+
+## IoTeX demo
+* Cf. [i-poc](https://github.com/alexandref75/veracruz-examples/tree/i-poc/i-poc)'s README
