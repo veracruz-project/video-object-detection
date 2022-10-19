@@ -129,6 +129,7 @@ void on_frame_ready(SBufferInfo *bufInfo)
     double time;
     const char *outfile_prefix = "output/prediction";
     char outfile[strlen(outfile_prefix) + 12];
+	outfile[0] = '\0';
     char frame_number_suffix[12];
 
     printf("Image %d ===========================\n", frames_processed);
