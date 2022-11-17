@@ -67,14 +67,16 @@ void init_darknet_detector(char *name_list_file, char *cfgfile,
  * Input:
  *   - initial image to be annotated with detection boxes
  *   - image to be processed by the model
- *   - detection threshold
- *   - hierarchy threshold
+ *   - objectness threshold above which an object is considered detected
+ *   - class threshold above which a class is considered detected assuming
+ *     objectness within the detection box
+ *   - hierarchical threshold (only used by YOLO9000)
  *   - output (prediction) file path: doesn't include the file extension
  *   - whether detection boxes should be drawn and saved to a file
  * Output: None
  */
-void run_darknet_detector(image im, image im_sized, float thresh,
-                          float hier_thresh, char *outfile,
+void run_darknet_detector(image im, image im_sized, float objectness_thresh,
+                          float class_thresh, float hier_thresh, char *outfile,
                           bool draw_detection_boxes)
 {
     double time;
@@ -91,15 +93,16 @@ void run_darknet_detector(image im, image im_sized, float thresh,
     // Get detections
     int nboxes = 0;
     layer l = net->layers[net->n - 1];
-    detection *dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, 0,
-                                        1, &nboxes);
+    detection *dets = get_network_boxes(net, im.w, im.h, objectness_thresh,
+                                        hier_thresh, 0, 1, &nboxes);
     if (nms)
         do_nms_sort(dets, nboxes, l.classes, nms);
     printf("Detection probabilities:\n");
 
     // Draw boxes around detected objects
     if (draw_detection_boxes) {
-        draw_detections(im, dets, nboxes, thresh, names, alphabet, l.classes);
+        draw_detections(im, dets, nboxes, objectness_thresh, names, alphabet,
+                        l.classes);
 
         // Output the prediction
         if (outfile) {
@@ -110,7 +113,8 @@ void run_darknet_detector(image im, image im_sized, float thresh,
                         what_time_is_it_now() - time);
         }
     } else {
-        print_detection_probabilities(im, dets, nboxes, thresh, names,
+        // Print classes above a certain detection threshold
+        print_detection_probabilities(im, dets, nboxes, class_thresh, names,
                                       l.classes);
     }
     free_detections(dets, nboxes);
@@ -129,7 +133,7 @@ void on_frame_ready(SBufferInfo *bufInfo)
     double time;
     const char *outfile_prefix = "output/prediction";
     char outfile[strlen(outfile_prefix) + 12];
-	outfile[0] = '\0';
+    outfile[0] = '\0';
     char frame_number_suffix[12];
 
     printf("Image %d ===========================\n", frames_processed);
@@ -150,7 +154,7 @@ void on_frame_ready(SBufferInfo *bufInfo)
     sprintf(frame_number_suffix, ".%d", frames_processed);
     strcat(outfile, frame_number_suffix);
 
-    run_darknet_detector(im, im_sized, .1, .5, outfile, true);
+    run_darknet_detector(im, im_sized, .1, .1, .5, outfile, true);
     printf("Detector run: %lf seconds\n", what_time_is_it_now() - time);
     frames_processed++;
 }
@@ -163,8 +167,8 @@ int main(int argc, char **argv)
 
     printf("Initializing detector...\n");
     time  = what_time_is_it_now();
-	// XXX: Box annotation is temporarily disabled until we find a way to
-	// efficiently provision a batch of files to the enclave (file archive?)
+    // XXX: Box annotation is temporarily disabled until we find a way to
+    // efficiently provision a batch of files to the enclave (file archive?)
     init_darknet_detector("program_data/coco.names", "program_data/yolov3.cfg",
                           "program_data/yolov3.weights", false);
     printf("Arguments loaded and network parsed: %lf seconds\n",
