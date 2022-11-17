@@ -2,12 +2,15 @@
 
 BACKEND="linux"
 PROFILE="debug"
-VERACRUZ_PATH="$HOME/veracruz"
+[ -z "$VERACRUZ_PATH" ] && VERACRUZ_PATH="$HOME/veracruz"
 POLICY_GENERATOR_PATH="$VERACRUZ_PATH/workspaces/host/target/$PROFILE/generate-policy"
-PAS_PATH="$VERACRUZ_PATH/workspaces/$BACKEND-host/target/$PROFILE/proxy-attestation-server"
 CLIENT_PATH="$VERACRUZ_PATH/workspaces/$BACKEND-host/target/$PROFILE/veracruz-client"
 SERVER_PATH="$VERACRUZ_PATH/workspaces/$BACKEND-host/target/$PROFILE/veracruz-server"
 RUNTIME_MANAGER_PATH="$VERACRUZ_PATH/workspaces/$BACKEND-runtime/target/$PROFILE/runtime_manager_enclave"
+
+VTS_PATH="/opt/veraison/vts"
+PROVISIONING_PATH="/opt/veraison/provisioning"
+PAS_PATH="/opt/veraison/proxy_attestation_server"
 
 PROGRAM_PATH="."
 DATA_PATH="program_data"
@@ -16,8 +19,8 @@ INPUT_VIDEO_PATH="in.h264"
 
 CA_CERT_CONF_PATH="$VERACRUZ_PATH/workspaces/ca-cert.conf"
 CERT_CONF_PATH="$VERACRUZ_PATH/workspaces/cert.conf"
-CA_CERT_PATH="ca_cert.pem"
-CA_KEY_PATH="ca_key.pem"
+CA_CERT_PATH="CACert.pem" # This value is hardcoded in the proxy attestation server
+CA_KEY_PATH="CAKey.pem" # This value is hardcoded in the proxy attestation server
 PROGRAM_CLIENT_CERT_PATH="program_client_cert.pem"
 PROGRAM_CLIENT_KEY_PATH="program_client_key.pem"
 DATA_CLIENT_CERT_PATH="data_client_cert.pem"
@@ -32,14 +35,15 @@ SERVER_LOG="server.log"
 
 
 echo "=============Killing components"
-killall -9 proxy-attestation-server veracruz-server veracruz-client runtime_enclave_binary
+killall -9 proxy_attestation_server veracruz-server veracruz-client runtime_enclave_binary
+$VERACRUZ_PATH/proxy_cleanup.sh
 
 
 
 echo "=============Generating certificates & keys if necessary"
 if [ ! -f $CA_CERT_PATH ] || [ ! -f $CA_KEY_PATH ]; then
 	echo "=============Generating $CA_CERT_PATH and $CA_KEY_PATH"
-	openssl ecparam -name prime256v1 -genkey > $CA_KEY_PATH
+	openssl ecparam -name prime256v1 -noout -genkey > $CA_KEY_PATH
 	openssl req -x509 \
 		-key $CA_KEY_PATH \
 		-out $CA_CERT_PATH \
@@ -83,15 +87,22 @@ $POLICY_GENERATOR_PATH \
 
 
 
-echo "=============Running proxy attestation server"
-RUST_LOG=error $PAS_PATH \
-      0.0.0.0:3010 \
-      --ca-cert $CA_CERT_PATH \
-      --ca-key $CA_KEY_PATH &
-
-
-
+echo "=============Running proxy attestation service"
+pushd "$PWD"
+cd $VTS_PATH && $VTS_PATH/vts &
+cd $PROVISIONING_PATH && $PROVISIONING_PATH/provisioning &
+popd
+$PAS_PATH -l 127.0.0.1:3010 &
 sleep 5
+
+
+
+echo "=============Provisioning attestation personalities"
+curl -X POST -H 'Content-Type: application/corim-unsigned+cbor; profile=http://arm.com/psa/iot/1' --data-binary "@/opt/veraison/psa_corim.cbor" localhost:8888/endorsement-provisioning/v1/submit
+curl -X POST -H 'Content-Type: application/corim-unsigned+cbor; profile=http://aws.com/nitro' --data-binary "@/opt/veraison/nitro_corim.cbor" localhost:8888/endorsement-provisioning/v1/submit
+
+
+
 echo "=============Running veracruz server"
 RUST_LOG=error $SERVER_PATH $POLICY_PATH &> $SERVER_LOG &
 
