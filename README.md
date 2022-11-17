@@ -70,7 +70,7 @@ There are several ways to do that. In any case the [file tree](#file-tree) must 
 
 ## End-to-end Veracruz deployment
 An application (program, data and policy) can't be validated until the program and data are provisioned by a Veracruz client to the Runtime Manager, the policy gets verified and the program successfully executes within the enclave.  
-The crux of an end-to-end deployment is to get the policy file right. To that end, a collection of deployment script are provided and take care of generating the certificates and the policy based on the program's [file tree](#file-tree).
+The crux of an end-to-end deployment is to get the policy file right. To that end, a collection of deployment scripts are provided and take care of generating the certificates and the policy based on the program's [file tree](#file-tree).
 * [Build Veracruz](https://github.com/veracruz-project/veracruz/blob/main/BUILD_INSTRUCTIONS.markdown)
-* Depending on your environment, run `./deploy_vod_big_linux.sh` or `./deploy_vod_big_nitro.sh` to generate the policy, deploy the Veracruz components and run the computation
+* Depending on your environment, run `./deploy_vod_big_linux.sh` or `./deploy_vod_big_nitro.sh` inside a Docker container (the same as the one used to build Veracruz) to generate the policy, deploy the Veracruz components and run the computation
 * The prediction images can be found in the executing directory
