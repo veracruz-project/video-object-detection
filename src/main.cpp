@@ -114,7 +114,7 @@ void run_darknet_detector(image im, image im_sized, float thresh,
         if (outfile) {
             printf("Saving prediction to %s.jpg...\n", outfile);
             time  = what_time_is_it_now();
-                save_image(im, outfile);
+            save_image(im, outfile);
             printf("Write duration: %lf seconds\n",
                         what_time_is_it_now() - time);
         }
@@ -138,7 +138,7 @@ void on_frame_ready(SBufferInfo *bufInfo)
     double time;
     const char *outfile_prefix = "output/prediction";
     char outfile[strlen(outfile_prefix) + 12];
-	outfile[0] = '\0';
+    outfile[0] = '\0';
     char frame_number_suffix[12];
 
     printf("Image %d ===========================\n", frames_processed);
@@ -171,40 +171,43 @@ int decrypt_video(char *encrypted_video_path, char *decrypted_video_path, char *
     long input_file_size;
     unsigned char key[KEY_LENGTH / 8];
     unsigned char iv[BLOCK_SIZE / 8];
-    unsigned char *input_buffer, *output_buffer;
+    unsigned char *input_buffer = NULL, *output_buffer = NULL;
     size_t output_len;
+    mbedtls_cipher_context_t ctx;
+    mbedtls_cipher_type_t type;
+    int ret = 1, mbedtls_ret = 1;
 
-	// Read key
+    // Read key
     f = fopen(key_path, "r");
     if (f == NULL) {
         printf("Couldn't open %s\n", key_path);
-        return 1;
+        goto exit;
     }
     n = fread(key, sizeof(key), 1, f);
+    fclose(f);
     if (n != 1) {
         printf("Invalid key length. Should be %d bits long\n", KEY_LENGTH);
-        return 1;
+        goto exit;
     }
-    fclose(f);
 
-	// Read IV
+    // Read IV
     f = fopen(iv_path, "r");
     if (f == NULL) {
         printf("Couldn't open %s\n", iv_path);
-        return 1;
+        goto exit;
     }
     n = fread(iv, sizeof(iv), 1, f);
+    fclose(f);
     if (n != 1) {
         printf("Invalid IV length. Should be %d bits long\n", BLOCK_SIZE);
-        return 1;
+        goto exit;
     }
-    fclose(f);
 
     // Determine input file size
     f = fopen(encrypted_video_path, "r");
     if (f == NULL) {
         printf("Couldn't open %s\n", encrypted_video_path);
-        return 1;
+        goto exit;
     }
     fseek(f, 0L, SEEK_END);
     input_file_size = ftell(f);
@@ -212,45 +215,73 @@ int decrypt_video(char *encrypted_video_path, char *decrypted_video_path, char *
 
     // Allocate input buffer the size of the input file
     input_buffer = (unsigned char *) malloc(input_file_size);
-
-    // Read input file
-    n = fread(input_buffer, input_file_size, 1, f);
-    if (n != 1) {
-        printf("Failure reading %s\n", encrypted_video_path);
-        return 1;
+    if (!input_buffer) {
+        printf("Couldn't allocate input buffer\n");
+        goto free_buffers;
     }
-    fclose(f);
 
     // Allocate output buffer the size of the input buffer (can't be longer than
     // that due to padding)
     output_buffer = (unsigned char *) malloc(input_file_size);
+    if (!output_buffer) {
+        printf("Couldn't allocate output buffer\n");
+        goto free_buffers;
+    }
 
-    // Initialize decryption context and decrypt buffer
-    mbedtls_cipher_context_t ctx;
-    mbedtls_cipher_type_t type = MBEDTLS_CIPHER_AES_128_CTR;
+    // Read input file
+    n = fread(input_buffer, input_file_size, 1, f);
+    fclose(f);
+    if (n != 1) {
+        printf("Failure reading %s\n", encrypted_video_path);
+        goto free_buffers;
+    }
+
+    // Initialize decryption context
+    type = MBEDTLS_CIPHER_AES_128_CTR;
     mbedtls_cipher_init(&ctx);
-    mbedtls_cipher_setup(&ctx, mbedtls_cipher_info_from_type(type));
-    mbedtls_cipher_setkey(&ctx, key, KEY_LENGTH, MBEDTLS_DECRYPT);
-    mbedtls_cipher_crypt(&ctx, iv, BLOCK_SIZE / 8, input_buffer, input_file_size, output_buffer, &output_len);
+    if ((mbedtls_ret = mbedtls_cipher_setup(&ctx, mbedtls_cipher_info_from_type(type))) != 0) {
+        printf("mbedtls_cipher_setup failed: %d\n", mbedtls_ret);
+        goto mbedtls_exit;
+    }
+    if ((mbedtls_ret = mbedtls_cipher_setkey(&ctx, key, KEY_LENGTH, MBEDTLS_DECRYPT)) != 0) {
+        printf("mbedtls_cipher_setkey failed: %d\n", mbedtls_ret);
+        goto mbedtls_exit;
+    }
 
-    free(input_buffer);
+    // Decrypt buffer
+    if ((mbedtls_ret = mbedtls_cipher_crypt(&ctx, iv, BLOCK_SIZE / 8, input_buffer, input_file_size, output_buffer, &output_len)) != 0) {
+        printf("mbedtls_cipher_crypt failed: %d\n", mbedtls_ret);
+        goto mbedtls_exit;
+    }
 
     // Write result to `decrypted_video_path`
     f = fopen(decrypted_video_path, "w");
     if (f == NULL) {
         printf("Couldn't open %s\n", decrypted_video_path);
-        return 1;
+        goto mbedtls_exit;
     }
     n = fwrite(output_buffer, output_len, 1, f);
+    fclose(f);
     if (n != 1) {
         printf("Failure writing %s\n", decrypted_video_path);
-        return 1;
+        goto mbedtls_exit;
     }
-    fclose(f);
 
+    ret = 0;
+
+mbedtls_exit:
+    mbedtls_cipher_free(&ctx);
+    mbedtls_platform_zeroize(input_buffer, input_file_size);
+    mbedtls_platform_zeroize(output_buffer, input_file_size);
+    mbedtls_platform_zeroize(key, sizeof(key));
+    mbedtls_platform_zeroize(iv, sizeof(iv));
+
+free_buffers:
+    free(input_buffer);
     free(output_buffer);
 
-    return 0;
+exit:
+    return ret;
 }
 
 /* Run the object detection model on each decoded frame */
@@ -261,6 +292,12 @@ int main(int argc, char **argv)
     char *decrypted_video_path = "program_internal/in.h264";
     char *key_path = "user_input/key";
     char *iv_path = "user_input/iv";
+    char *name_list_file = "program_data/coco.names";
+    char *cfgfile = "program_data/yolov3.cfg";
+    char *weightfile = "program_data/yolov3.weights";
+    // XXX: Box annotation is temporarily disabled until we find a way to
+    // efficiently provision a batch of files to the enclave (file archive?)
+    bool annotate_boxes = false;
 
     // Decrypt input video
     printf("Decrypting video...\n");
@@ -269,13 +306,10 @@ int main(int argc, char **argv)
         return 1;
     }
 
-	// Initialize Darknet
+    // Initialize Darknet
     printf("Initializing detector...\n");
     time  = what_time_is_it_now();
-	// XXX: Box annotation is temporarily disabled until we find a way to
-	// efficiently provision a batch of files to the enclave (file archive?)
-    init_darknet_detector("program_data/coco.names", "program_data/yolov3.cfg",
-                          "program_data/yolov3.weights", false);
+    init_darknet_detector(name_list_file, cfgfile, weightfile, annotate_boxes);
     printf("Arguments loaded and network parsed: %lf seconds\n",
                 what_time_is_it_now() - time);
 
@@ -285,6 +319,8 @@ int main(int argc, char **argv)
     int x = h264_decode(decrypted_video_path, "", false, &on_frame_ready);
     printf("Finished decoding: %lf seconds\n",
            what_time_is_it_now() - time);
+    if (frames_processed == 0)
+        printf("No frames were processed. The input video was whether empty or not an H.264 video\n");
 
     return x;
 }
