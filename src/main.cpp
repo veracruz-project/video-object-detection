@@ -164,13 +164,16 @@ int main(int argc, char **argv)
 {
     double time;
     char *input_file = "video_input/in.h264";
+    char *name_list_file = "program_data/coco.names";
+    char *cfgfile = "program_data/yolov3.cfg";
+    char *weightfile = "program_data/yolov3.weights";
+    // XXX: Box annotation is temporarily disabled until we find a way to
+    // efficiently provision a batch of files to the enclave (file archive?)
+    bool annotate_boxes = false;
 
     printf("Initializing detector...\n");
     time  = what_time_is_it_now();
-    // XXX: Box annotation is temporarily disabled until we find a way to
-    // efficiently provision a batch of files to the enclave (file archive?)
-    init_darknet_detector("program_data/coco.names", "program_data/yolov3.cfg",
-                          "program_data/yolov3.weights", false);
+    init_darknet_detector(name_list_file, cfgfile, weightfile, annotate_boxes);
     printf("Arguments loaded and network parsed: %lf seconds\n",
                 what_time_is_it_now() - time);
 
@@ -179,6 +182,9 @@ int main(int argc, char **argv)
     int x = h264_decode(input_file, "", false, &on_frame_ready);
     printf("Finished decoding: %lf seconds\n",
                 what_time_is_it_now() - time);
+    if (frames_processed == 0)
+        printf("No frames were processed. The input video was whether empty or not an H.264 video\n");
+
 
     return x;
 }
