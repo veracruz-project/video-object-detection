@@ -1,24 +1,24 @@
 #!/bin/bash
 
 BACKEND="linux"
-PROFILE="debug"
-[ -z "$VERACRUZ_PATH" ] && VERACRUZ_PATH="$HOME/veracruz"
-POLICY_GENERATOR_PATH="$VERACRUZ_PATH/workspaces/host/target/$PROFILE/generate-policy"
-CLIENT_PATH="$VERACRUZ_PATH/workspaces/$BACKEND-host/target/$PROFILE/veracruz-client"
-SERVER_PATH="$VERACRUZ_PATH/workspaces/$BACKEND-host/target/$PROFILE/veracruz-server"
-RUNTIME_MANAGER_PATH="$VERACRUZ_PATH/workspaces/$BACKEND-runtime/target/$PROFILE/runtime_manager_enclave"
+PROFILE="${PROFILE:-debug}"
+VERACRUZ_PATH="${VERACRUZ_PATH:-$HOME/veracruz}"
+POLICY_GENERATOR_PATH="${POLICY_GENERATOR_PATH:-$VERACRUZ_PATH/workspaces/host/target/$PROFILE/generate-policy}"
+CLIENT_PATH="${CLIENT_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-host/target/$PROFILE/veracruz-client}"
+SERVER_PATH="${SERVER_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-host/target/$PROFILE/veracruz-server}"
+RUNTIME_MANAGER_PATH="${RUNTIME_MANAGER_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-runtime/target/$PROFILE/runtime_manager_enclave}"
 
 VTS_PATH="/opt/veraison/vts"
 PROVISIONING_PATH="/opt/veraison/provisioning"
 PAS_PATH="/opt/veraison/proxy_attestation_server"
 
-PROGRAM_PATH="."
-DATA_PATH="program_data"
-POLICY_PATH="policy.json"
+PROGRAM_PATH="${PROGRAM_PATH:-.}"
+DATA_PATH="${DATA_PATH:-program_data}"
+POLICY_PATH="${POLICY_PATH:-policy.json}"
 INPUT_VIDEO_PATH="in.h264"
 
-CA_CERT_CONF_PATH="$VERACRUZ_PATH/workspaces/ca-cert.conf"
-CERT_CONF_PATH="$VERACRUZ_PATH/workspaces/cert.conf"
+CA_CERT_CONF_PATH="${CA_CERT_CONF_PATH:-$VERACRUZ_PATH/workspaces/ca-cert.conf}"
+CERT_CONF_PATH="${CERT_CONF_PATH:-$VERACRUZ_PATH/workspaces/cert.conf}"
 CA_CERT_PATH="CACert.pem" # This value is hardcoded in the proxy attestation server
 CA_KEY_PATH="CAKey.pem" # This value is hardcoded in the proxy attestation server
 PROGRAM_CLIENT_CERT_PATH="program_client_cert.pem"
@@ -32,11 +32,13 @@ RESULT_CLIENT_KEY_PATH="result_client_key.pem"
 
 SERVER_LOG="server.log"
 
+PROXY_CLEANUP_SCRIPT_PATH="${PROXY_CLEANUP_SCRIPT_PATH:-$VERACRUZ_PATH/proxy_cleanup.sh}"
+
 
 
 echo "=============Killing components"
 killall -9 proxy_attestation_server veracruz-server veracruz-client runtime_enclave_binary
-$VERACRUZ_PATH/proxy_cleanup.sh
+$PROXY_CLEANUP_SCRIPT_PATH
 
 
 
@@ -159,3 +161,9 @@ RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
     $result_line \
     --identity $RESULT_CLIENT_CERT_PATH \
     --key $RESULT_CLIENT_KEY_PATH
+
+
+
+echo "=============Killing components"
+killall -9 proxy_attestation_server veracruz-server veracruz-client runtime_enclave_binary
+$PROXY_CLEANUP_SCRIPT_PATH
