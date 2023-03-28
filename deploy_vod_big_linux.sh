@@ -15,7 +15,7 @@ PAS_PATH="/opt/veraison/proxy_attestation_server"
 PROGRAM_PATH="${PROGRAM_PATH:-.}"
 DATA_PATH="${DATA_PATH:-program_data}"
 POLICY_PATH="${POLICY_PATH:-policy.json}"
-INPUT_VIDEO_PATH="in.h264"
+INPUT_VIDEO_PATH="video_input/in.h264"
 
 CA_CERT_CONF_PATH="${CA_CERT_CONF_PATH:-$VERACRUZ_PATH/workspaces/ca-cert.conf}"
 CERT_CONF_PATH="${CERT_CONF_PATH:-$VERACRUZ_PATH/workspaces/cert.conf}"
