@@ -1,25 +1,45 @@
 #!/bin/bash
 
 BACKEND="nitro"
-PROFILE="debug"
-[ -z "$VERACRUZ_PATH" ] && VERACRUZ_PATH="$HOME/veracruz"
-POLICY_GENERATOR_PATH="$VERACRUZ_PATH/workspaces/host/target/$PROFILE/generate-policy"
-CLIENT_PATH="$VERACRUZ_PATH/workspaces/$BACKEND-host/target/$PROFILE/veracruz-client"
-SERVER_PATH="$VERACRUZ_PATH/workspaces/$BACKEND-host/target/$PROFILE/veracruz-server"
-EIF_PATH="$VERACRUZ_PATH/workspaces/$BACKEND-runtime/runtime_manager.eif"
-PCR0_PATH="$VERACRUZ_PATH/workspaces/$BACKEND-runtime/PCR0"
+PROFILE="${PROFILE:-debug}"
+VERACRUZ_PATH="${VERACRUZ_PATH:-$HOME/veracruz}"
 
+# Binaries
+POLICY_GENERATOR_PATH="${POLICY_GENERATOR_PATH:-$VERACRUZ_PATH/workspaces/host/target/$PROFILE/generate-policy}"
+CLIENT_PATH="${CLIENT_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-host/target/$PROFILE/veracruz-client}"
+SERVER_PATH="${SERVER_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-host/target/$PROFILE/veracruz-server}"
+EIF_PATH="${EIF_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-runtime/runtime_manager.eif}"
+PCR0_PATH="${PCR0_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-runtime/PCR0}"
+
+# Attestation
 VTS_PATH="/opt/veraison/vts"
 PROVISIONING_PATH="/opt/veraison/provisioning"
 PAS_PATH="/opt/veraison/proxy_attestation_server"
 
-PROGRAM_PATH="."
-DATA_PATH="program_data"
-POLICY_PATH="policy.json"
-INPUT_VIDEO_PATH="in.h264"
+# Provisions
+PROGRAM_DIR="${PROGRAM_DIR:-program}"
+PROGRAM_DATA_DIR="${PROGRAM_DATA_DIR:-program_data}"
+VIDEO_INPUT_DIR="${VIDEO_INPUT_DIR:-video_input}"
+OUTPUT_DIR="${OUTPUT_DIR:-output}"
+PROGRAM_BASENAME="detector.wasm"
+PROGRAM_PATH_LOCAL="${PROGRAM_PATH_LOCAL:-./$PROGRAM_BASENAME}"
+PROGRAM_PATH_REMOTE="${PROGRAM_PATH_REMOTE:-/$PROGRAM_DIR/$PROGRAM_BASENAME}"
+COCO_BASENAME="coco.names"
+COCO_PATH_LOCAL="${COCO_PATH_LOCAL:-$PROGRAM_DATA_DIR/$COCO_BASENAME}"
+COCO_PATH_REMOTE="${COCO_PATH_REMOTE:-/$PROGRAM_DATA_DIR/$COCO_BASENAME}"
+YOLOV3_CFG_BASENAME="yolov3.cfg"
+YOLOV3_CFG_PATH_LOCAL="${YOLOV3_CFG_PATH_LOCAL:-$PROGRAM_DATA_DIR/$YOLOV3_CFG_BASENAME}"
+YOLOV3_CFG_PATH_REMOTE="${YOLOV3_CFG_PATH_REMOTE:-/$PROGRAM_DATA_DIR/$YOLOV3_CFG_BASENAME}"
+YOLOV3_WEIGHTS_BASENAME="yolov3.weights"
+YOLOV3_WEIGHTS_PATH_LOCAL="${YOLOV3_WEIGHTS_PATH_LOCAL:-$PROGRAM_DATA_DIR/$YOLOV3_WEIGHTS_BASENAME}"
+YOLOV3_WEIGHTS_PATH_REMOTE="${YOLOV3_WEIGHTS_PATH_REMOTE:-/$PROGRAM_DATA_DIR/$YOLOV3_WEIGHTS_BASENAME}"
+INPUT_VIDEO_BASENAME="in.h264"
+INPUT_VIDEO_PATH_LOCAL="${INPUT_VIDEO_PATH_LOCAL:-$VIDEO_INPUT_DIR/$INPUT_VIDEO_BASENAME}"
+INPUT_VIDEO_PATH_REMOTE="${INPUT_VIDEO_PATH_REMOTE:-/$VIDEO_INPUT_DIR/$INPUT_VIDEO_BASENAME}"
 
-CA_CERT_CONF_PATH="$VERACRUZ_PATH/workspaces/ca-cert.conf"
-CERT_CONF_PATH="$VERACRUZ_PATH/workspaces/cert.conf"
+# PKI
+CA_CERT_CONF_PATH="${CA_CERT_CONF_PATH:-$VERACRUZ_PATH/workspaces/ca-cert.conf}"
+CERT_CONF_PATH="${CERT_CONF_PATH:-$VERACRUZ_PATH/workspaces/cert.conf}"
 CA_CERT_PATH="CACert.pem" # This value is hardcoded in the proxy attestation server
 CA_KEY_PATH="CAKey.pem" # This value is hardcoded in the proxy attestation server
 PROGRAM_CLIENT_CERT_PATH="program_client_cert.pem"
@@ -31,14 +51,18 @@ VIDEO_CLIENT_KEY_PATH="video_client_key.pem"
 RESULT_CLIENT_CERT_PATH="result_client_cert.pem"
 RESULT_CLIENT_KEY_PATH="result_client_key.pem"
 
-SERVER_LOG="server.log"
-NITRO_LOG="nitro.log"
+POLICY_PATH="${POLICY_PATH:-policy.json}"
+
+PROXY_CLEANUP_SCRIPT_PATH="${PROXY_CLEANUP_SCRIPT_PATH:-$VERACRUZ_PATH/proxy_cleanup.sh}"
+
+NITRO_LOG="${NITRO_LOG:-nitro.log}"
+SERVER_LOG="${SERVER_LOG:-server.log}"
 
 
 
 echo "=============Killing components"
 killall -9 proxy_attestation_server veracruz-server veracruz-client runtime_enclave_binary
-$VERACRUZ_PATH/proxy_cleanup.sh
+$PROXY_CLEANUP_SCRIPT_PATH
 nitro-cli terminate-enclave --all || exit
 
 
@@ -77,15 +101,15 @@ $POLICY_GENERATOR_PATH \
     --certificate-expiry "$(date --rfc-2822 -d 'now + 100 days')" \
     --pcr-file $PCR0_PATH \
     --certificate $PROGRAM_CLIENT_CERT_PATH \
-    --capability "/program/:w" \
+    --capability "/$PROGRAM_DIR/:w" \
     --certificate $DATA_CLIENT_CERT_PATH \
-    --capability "/program_data/:w" \
+    --capability "/$PROGRAM_DATA_DIR/:w" \
     --certificate $VIDEO_CLIENT_CERT_PATH \
-    --capability "/video_input/:w" \
+    --capability "/$VIDEO_INPUT_DIR/:w" \
     --certificate $RESULT_CLIENT_CERT_PATH \
-    --capability "/program/:x,/output/:r,stdout:r,stderr:r" \
-    --binary /program/detector.wasm=$PROGRAM_PATH/detector.wasm \
-    --capability "/program_data/:r,/video_input/:r,/program_internal/:rw,/output/:w,stdout:w,stderr:w" \
+    --capability "/$PROGRAM_DIR/:x,/$OUTPUT_DIR/:r,stdout:r,stderr:r" \
+    --binary $PROGRAM_PATH_REMOTE=$PROGRAM_PATH_LOCAL \
+    --capability "/$PROGRAM_DATA_DIR/:r,/$VIDEO_INPUT_DIR/:r,/program_internal/:rw,/$OUTPUT_DIR/:w,stdout:w,stderr:w" \
     --output-policy-file $POLICY_PATH
 
 
@@ -126,27 +150,27 @@ echo "=============Executing veracruz client"
 
 echo "=============Provisioning program"
 RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
-    --program /program/detector.wasm=$PROGRAM_PATH/detector.wasm \
+    --program $PROGRAM_PATH_REMOTE=$PROGRAM_PATH_LOCAL \
     --identity $PROGRAM_CLIENT_CERT_PATH \
     --key $PROGRAM_CLIENT_KEY_PATH
 
 echo "=============Provisioning data"
 RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
-    --data /program_data/coco.names=$DATA_PATH/coco.names \
-    --data /program_data/yolov3.cfg=$DATA_PATH/yolov3.cfg \
-    --data /program_data/yolov3.weights=$DATA_PATH/yolov3.weights \
+    --data $COCO_PATH_REMOTE=$COCO_PATH_LOCAL \
+    --data $YOLOV3_CFG_PATH_REMOTE=$YOLOV3_CFG_PATH_LOCAL \
+    --data $YOLOV3_WEIGHTS_PATH_REMOTE=$YOLOV3_WEIGHTS_PATH_LOCAL \
     --identity $DATA_CLIENT_CERT_PATH \
     --key $DATA_CLIENT_KEY_PATH
 
 echo "=============Provisioning video"
 RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
-    --data /video_input/in.h264=$INPUT_VIDEO_PATH \
+    --data $INPUT_VIDEO_PATH_REMOTE=$INPUT_VIDEO_PATH_LOCAL \
     --identity $VIDEO_CLIENT_CERT_PATH \
     --key $VIDEO_CLIENT_KEY_PATH
 
 echo "=============Requesting computation"
 RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
-    --compute /program/detector.wasm \
+    --compute $PROGRAM_PATH_REMOTE \
     --identity $RESULT_CLIENT_CERT_PATH \
     --key $RESULT_CLIENT_KEY_PATH
 
@@ -162,9 +186,16 @@ frame_count=$(echo "$dump" | grep "^Frames:" | awk '{print $2}')
 
 echo "=============Querying results (predictions)"
 for ((i=0;i<frame_count;i++)); do
-       result_line="$result_line --result /output/prediction.$i.jpg=prediction.$i.jpg"
+       result_line="$result_line --result /$OUTPUT_DIR/prediction.$i.jpg=prediction.$i.jpg"
 done
 RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
     $result_line \
     --identity $RESULT_CLIENT_CERT_PATH \
     --key $RESULT_CLIENT_KEY_PATH
+
+
+
+echo "=============Killing components"
+killall -9 proxy_attestation_server veracruz-server veracruz-client runtime_enclave_binary
+$PROXY_CLEANUP_SCRIPT_PATH
+nitro-cli terminate-enclave --all || exit
