@@ -71,14 +71,9 @@ libopenh264dec_wasm.a:
 
 
 ##########################################################
-yolo_detection:
+# Generate alphabet for box annotation
+generate_alphabet:
 	python program_data/labels/make_labels.py
-	if [ ! -f "program_data/yolov3-tiny.weights" ]; then \
-		wget -P program_data/ https://pjreddie.com/media/files/yolov3-tiny.weights; \
-	fi
-	if [ ! -f "program_data/yolov3.weights" ]; then \
-		wget -P program_data/ https://pjreddie.com/media/files/yolov3.weights; \
-	fi
 
 
 clean:
