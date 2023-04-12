@@ -73,7 +73,7 @@ libopenh264dec_wasm.a:
 ##########################################################
 # Generate alphabet for box annotation
 generate_alphabet:
-	cd program_data/labels && python make_labels.py
+	cd labels && python make_labels.py
 
 
 clean:

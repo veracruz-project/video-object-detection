@@ -33,7 +33,8 @@ The video decoder uses [`openh264`](https://github.com/veracruz-project/openh264
   ```
 * Download the YOLO models and configuration files and the COCO object list:
   ``` bash ci-build
-  $ wget -P program_data \
+  $ mkdir -p program_data && \
+  wget -P program_data \
   https://github.com/veracruz-project/video-object-detection/releases/download/20230406/yolov3.weights \
   https://github.com/veracruz-project/video-object-detection/releases/download/20230406/yolov3-tiny.weights \
   https://github.com/veracruz-project/video-object-detection/releases/download/20230406/yolov3.cfg \
