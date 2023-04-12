@@ -99,6 +99,7 @@ There are several ways to do that. In any case the [file tree](#file-tree) must 
   ```
 
 ### As a WebAssembly binary in the [`freestanding execution engine`](https://github.com/veracruz-project/veracruz/tree/main/sdk/freestanding-execution-engine)
+* [Build the freestanding execution engine](https://github.com/veracruz-project/veracruz/tree/main/sdk/freestanding-execution-engine)
 * Run:
   ``` bash ci-run-fee
   $ mkdir -p program && \
