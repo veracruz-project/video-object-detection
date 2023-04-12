@@ -60,7 +60,7 @@ SERVER_LOG="${SERVER_LOG:-server.log}"
 
 echo "=============Killing components"
 killall -9 proxy_attestation_server veracruz-server veracruz-client runtime_enclave_binary
-$PROXY_CLEANUP_SCRIPT_PATH
+$PROXY_CLEANUP_SCRIPT_PATH || true
 
 
 
@@ -188,4 +188,4 @@ RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
 
 echo "=============Killing components"
 killall -9 proxy_attestation_server veracruz-server veracruz-client runtime_enclave_binary
-$PROXY_CLEANUP_SCRIPT_PATH
+$PROXY_CLEANUP_SCRIPT_PATH || true
