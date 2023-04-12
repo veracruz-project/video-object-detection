@@ -13,9 +13,9 @@ The video decoder uses [`openh264`](https://github.com/veracruz-project/openh264
   echo "export WASI_SDK_ROOT=\"${PWD}/wasi-sdk-${WASI_VERSION_FULL}\"" >> ~/.bashrc && \
   . ~/.bashrc
   ```
-* Install `imagemagick` and `nasm` (Ubuntu):
+* Install `nasm` (Ubuntu):
   ``` bash ci-build
-  $ apt-get update && apt-get install -y imagemagick nasm
+  $ apt-get update && apt-get install -y nasm
   ```
 * Clone the repo and update the submodules:
   ``` bash
@@ -41,9 +41,10 @@ The video decoder uses [`openh264`](https://github.com/veracruz-project/openh264
   https://github.com/veracruz-project/video-object-detection/releases/download/20230406/yolov3-tiny.cfg \
   https://github.com/veracruz-project/video-object-detection/releases/download/20230406/coco.names
   ```
-* Generate the alphabet (optional):
+* Generate the alphabet (optional). Requires `imagemagick`:
   ``` bash
-  $ make generate_alphabet
+  $ apt-get update && apt-get install -y imagemagick && \
+  make generate_alphabet
   ```
 
 ## Prepare the input video (optional)
@@ -77,7 +78,8 @@ The video decoder uses [`openh264`](https://github.com/veracruz-project/openh264
 
 ## Execution outside Veracruz
 Running the program outside Veracruz is useful to validate the program without considering the policy and the TEE backend it runs on.  
-There are several ways to do that. In any case the [file tree](#file-tree) must be mirrored on the executing machine.
+There are several ways to do that. In any case the [file tree](#file-tree) must be mirrored on the executing machine.  
+Trick: To run VOD faster, replace the big YOLO model (`yolov3.*`) with the tiny one (`yolov3-tiny.*`).
 
 ### As a standalone native binary
 * Build as a native binary (cf. build steps above)
