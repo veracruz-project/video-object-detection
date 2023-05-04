@@ -108,9 +108,9 @@ void run_darknet_detector(image im, image im_sized, float objectness_thresh,
         if (outfile) {
             printf("Saving prediction to %s.jpg...\n", outfile);
             time  = what_time_is_it_now();
-                save_image(im, outfile);
+            save_image(im, outfile);
             printf("Write duration: %lf seconds\n",
-                        what_time_is_it_now() - time);
+                    what_time_is_it_now() - time);
         }
     } else {
         // Print classes above a certain detection threshold
