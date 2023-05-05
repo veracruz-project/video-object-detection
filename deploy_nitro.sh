@@ -17,6 +17,8 @@ PROVISIONING_PATH="/opt/veraison/provisioning"
 PAS_PATH="/opt/veraison/proxy_attestation_server"
 
 # Addresses and ports
+PROVISIONING_SERVER_ADDRESS="localhost"
+PROVISIONING_SERVER_PORT="8888"
 PAS_ADDRESS="127.0.0.1"
 PAS_PORT="3010"
 VC_SERVER_ADDRESS="127.0.0.1"
@@ -153,8 +155,8 @@ sleep 5
 
 
 echo "=============Provisioning attestation personalities"
-curl -X POST -H 'Content-Type: application/corim-unsigned+cbor; profile=http://arm.com/psa/iot/1' --data-binary "@/opt/veraison/psa_corim.cbor" localhost:8888/endorsement-provisioning/v1/submit || exit
-curl -X POST -H 'Content-Type: application/corim-unsigned+cbor; profile=http://aws.com/nitro' --data-binary "@/opt/veraison/nitro_corim.cbor" localhost:8888/endorsement-provisioning/v1/submit || exit
+curl -X POST -H 'Content-Type: application/corim-unsigned+cbor; profile=http://arm.com/psa/iot/1' --data-binary "@/opt/veraison/psa_corim.cbor" $PROVISIONING_SERVER_ADDRESS:$PROVISIONING_SERVER_PORT/endorsement-provisioning/v1/submit || exit
+curl -X POST -H 'Content-Type: application/corim-unsigned+cbor; profile=http://aws.com/nitro' --data-binary "@/opt/veraison/nitro_corim.cbor" $PROVISIONING_SERVER_ADDRESS:$PROVISIONING_SERVER_PORT/endorsement-provisioning/v1/submit || exit
 
 
 
