@@ -16,6 +16,12 @@ VTS_PATH="/opt/veraison/vts"
 PROVISIONING_PATH="/opt/veraison/provisioning"
 PAS_PATH="/opt/veraison/proxy_attestation_server"
 
+# Addresses and ports
+PAS_ADDRESS="127.0.0.1"
+PAS_PORT="3010"
+VC_SERVER_ADDRESS="127.0.0.1"
+VC_SERVER_PORT="3017"
+
 # Provisions
 PROGRAM_DIR="${PROGRAM_DIR:-program}"
 PROGRAM_DATA_DIR="${PROGRAM_DATA_DIR:-program_data}"
@@ -95,9 +101,9 @@ $POLICY_GENERATOR_PATH \
     --max-memory-mib 2000 \
     --enclave-debug-mode \
     --enable-clock \
-    --proxy-attestation-server-ip 127.0.0.1:3010 \
+    --proxy-attestation-server-ip $PAS_ADDRESS:$PAS_PORT \
     --proxy-attestation-server-cert $CA_CERT_PATH \
-    --veracruz-server-ip 127.0.0.1:3017 \
+    --veracruz-server-ip $VC_SERVER_ADDRESS:$VC_SERVER_PORT \
     --certificate-expiry "$(date --rfc-2822 -d 'now + 100 days')" \
     --pcr-file $PCR0_PATH \
     --certificate $PROGRAM_CLIENT_CERT_PATH \
@@ -119,7 +125,7 @@ pushd "$PWD"
 cd $VTS_PATH && $VTS_PATH/vts &
 cd $PROVISIONING_PATH && $PROVISIONING_PATH/provisioning &
 popd
-$PAS_PATH -l 127.0.0.1:3010 &
+$PAS_PATH -l $PAS_ADDRESS:$PAS_PORT &
 sleep 5
 
 
@@ -137,7 +143,7 @@ RUST_LOG=error RUNTIME_MANAGER_EIF_PATH=$EIF_PATH $SERVER_PATH $POLICY_PATH &> $
 
 echo "=============Waiting for veracruz server to be ready"
 while true; do
-        echo -n | telnet 127.0.0.1 3017 2>/dev/null | grep "^Connected to" && break
+        echo -n | telnet $VC_SERVER_ADDRESS $VC_SERVER_PORT 2>/dev/null | grep "^Connected to" && break
         sleep 1
 done
 
