@@ -136,7 +136,10 @@ RUST_LOG=error RUNTIME_MANAGER_EIF_PATH=$EIF_PATH $SERVER_PATH $POLICY_PATH &> $
 
 
 echo "=============Waiting for veracruz server to be ready"
-grep -q "Veracruz Server running on" <(tail -f $SERVER_LOG)
+while true; do
+        echo -n | telnet 127.0.0.1 3017 2>/dev/null | grep "^Connected to" && break
+        sleep 1
+done
 
 
 

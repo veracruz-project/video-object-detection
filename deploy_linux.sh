@@ -105,8 +105,8 @@ $POLICY_GENERATOR_PATH \
     --capability "/$VIDEO_INPUT_DIR/:w" \
     --certificate $RESULT_CLIENT_CERT_PATH \
     --capability "/$PROGRAM_DIR/:x,/$OUTPUT_DIR/:r,stdout:r,stderr:r" \
-    --binary $PROGRAM_PATH_REMOTE=$PROGRAM_PATH_LOCAL \
     --capability "/$PROGRAM_DATA_DIR/:r,/$VIDEO_INPUT_DIR/:r,/program_internal/:rw,/$OUTPUT_DIR/:w,stdout:w,stderr:w" \
+    --program-binary $PROGRAM_PATH_REMOTE=$PROGRAM_PATH_LOCAL \
     --output-policy-file $POLICY_PATH
 
 
@@ -133,7 +133,10 @@ RUST_LOG=error $SERVER_PATH $POLICY_PATH &> $SERVER_LOG &
 
 
 echo "=============Waiting for veracruz server to be ready"
-grep -q "Veracruz Server running on" <(tail -f $SERVER_LOG)
+while true; do
+        echo -n | telnet 127.0.0.1 3017 2>/dev/null | grep "^Connected to" && break
+        sleep 1
+done
 
 
 
