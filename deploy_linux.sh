@@ -105,11 +105,11 @@ for i in "$PROGRAM_CLIENT_CERT_PATH $PROGRAM_CLIENT_KEY_PATH" "$DATA_CLIENT_CERT
     set -- $i
     if [ ! -f $1 ] || [ ! -f $2 ]; then
         echo "=============Generating $1 and $2"
-        openssl ecparam -name prime256v1 -genkey > $2
+        openssl ecparam -name prime256v1 -genkey > $2 || exit
         openssl req -x509 \
             -key $2 \
             -out $1 \
-            -config $CERT_CONF_PATH
+            -config $CERT_CONF_PATH || exit
     fi
 done
 
@@ -135,7 +135,7 @@ $POLICY_GENERATOR_PATH \
     --capability "/$PROGRAM_DIR/:x,/$OUTPUT_DIR/:r,stdout:r,stderr:r" \
     --capability "/$PROGRAM_DATA_DIR/:r,/$VIDEO_INPUT_DIR/:r,/program_internal/:rw,/$OUTPUT_DIR/:w,stdout:w,stderr:w" \
     --program-binary $PROGRAM_PATH_REMOTE=$PROGRAM_PATH_LOCAL \
-    --output-policy-file $POLICY_PATH
+    --output-policy-file $POLICY_PATH || exit
 
 
 
@@ -150,8 +150,8 @@ sleep 5
 
 
 echo "=============Provisioning attestation personalities"
-curl -X POST -H 'Content-Type: application/corim-unsigned+cbor; profile=http://arm.com/psa/iot/1' --data-binary "@/opt/veraison/psa_corim.cbor" localhost:8888/endorsement-provisioning/v1/submit
-curl -X POST -H 'Content-Type: application/corim-unsigned+cbor; profile=http://aws.com/nitro' --data-binary "@/opt/veraison/nitro_corim.cbor" localhost:8888/endorsement-provisioning/v1/submit
+curl -X POST -H 'Content-Type: application/corim-unsigned+cbor; profile=http://arm.com/psa/iot/1' --data-binary "@/opt/veraison/psa_corim.cbor" localhost:8888/endorsement-provisioning/v1/submit || exit
+curl -X POST -H 'Content-Type: application/corim-unsigned+cbor; profile=http://aws.com/nitro' --data-binary "@/opt/veraison/nitro_corim.cbor" localhost:8888/endorsement-provisioning/v1/submit || exit
 
 
 
@@ -176,7 +176,7 @@ echo "=============Provisioning program"
 RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
     --program $PROGRAM_PATH_REMOTE=$PROGRAM_PATH_LOCAL \
     --identity $PROGRAM_CLIENT_CERT_PATH \
-    --key $PROGRAM_CLIENT_KEY_PATH
+    --key $PROGRAM_CLIENT_KEY_PATH || exit
 
 echo "=============Provisioning data"
 RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
@@ -184,19 +184,19 @@ RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
     --data $YOLOV3_CFG_PATH_REMOTE=$YOLOV3_CFG_PATH_LOCAL \
     --data $YOLOV3_WEIGHTS_PATH_REMOTE=$YOLOV3_WEIGHTS_PATH_LOCAL \
     --identity $DATA_CLIENT_CERT_PATH \
-    --key $DATA_CLIENT_KEY_PATH
+    --key $DATA_CLIENT_KEY_PATH || exit
 
 echo "=============Provisioning video"
 RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
     --data $INPUT_VIDEO_PATH_REMOTE=$INPUT_VIDEO_PATH_LOCAL \
     --identity $VIDEO_CLIENT_CERT_PATH \
-    --key $VIDEO_CLIENT_KEY_PATH
+    --key $VIDEO_CLIENT_KEY_PATH || exit
 
 echo "=============Requesting computation"
 RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
     --compute $PROGRAM_PATH_REMOTE \
     --identity $RESULT_CLIENT_CERT_PATH \
-    --key $RESULT_CLIENT_KEY_PATH
+    --key $RESULT_CLIENT_KEY_PATH || exit
 
 echo "=============Querying results (stdout and stderr)"
 dump=$(RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
