@@ -62,6 +62,28 @@ PROXY_CLEANUP_SCRIPT_PATH="${PROXY_CLEANUP_SCRIPT_PATH:-$VERACRUZ_PATH/proxy_cle
 
 SERVER_LOG="${SERVER_LOG:-server.log}"
 
+# Parse arguments
+ARGS=()
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --serverless)
+      # Don't run Veracruz-Server as part of this script. Useful when running
+      # Veracruz-Server in a debugger
+      SERVERLESS=1
+      shift
+      ;;
+    -*|--*)
+      echo "Unknown option $1"
+      exit 1
+      ;;
+    *)
+      ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+set -- "${ARGS[@]}"
+
 
 
 echo "=============Killing components"
@@ -72,12 +94,12 @@ $PROXY_CLEANUP_SCRIPT_PATH || true
 
 echo "=============Generating certificates & keys if necessary"
 if [ ! -f $CA_CERT_PATH ] || [ ! -f $CA_KEY_PATH ]; then
-	echo "=============Generating $CA_CERT_PATH and $CA_KEY_PATH"
-	openssl ecparam -name prime256v1 -noout -genkey > $CA_KEY_PATH
-	openssl req -x509 \
-		-key $CA_KEY_PATH \
-		-out $CA_CERT_PATH \
-		-config $CA_CERT_CONF_PATH
+    echo "=============Generating $CA_CERT_PATH and $CA_KEY_PATH"
+    openssl ecparam -name prime256v1 -noout -genkey > $CA_KEY_PATH
+    openssl req -x509 \
+        -key $CA_KEY_PATH \
+        -out $CA_CERT_PATH \
+        -config $CA_CERT_CONF_PATH
 fi
 for i in "$PROGRAM_CLIENT_CERT_PATH $PROGRAM_CLIENT_KEY_PATH" "$DATA_CLIENT_CERT_PATH $DATA_CLIENT_KEY_PATH" "$VIDEO_CLIENT_CERT_PATH $VIDEO_CLIENT_KEY_PATH" "$RESULT_CLIENT_CERT_PATH $RESULT_CLIENT_KEY_PATH"; do
     set -- $i
@@ -133,8 +155,10 @@ curl -X POST -H 'Content-Type: application/corim-unsigned+cbor; profile=http://a
 
 
 
-echo "=============Running veracruz server"
-RUST_LOG=error $SERVER_PATH $POLICY_PATH &> $SERVER_LOG &
+if [ -z $SERVERLESS ]; then 
+    echo "=============Running veracruz server"
+    RUST_LOG=error $SERVER_PATH $POLICY_PATH &> $SERVER_LOG &
+fi
 
 
 
