@@ -138,7 +138,7 @@ $POLICY_GENERATOR_PATH \
     --capability "/$VIDEO_INPUT_DIR/:w" \
     --certificate $RESULT_CLIENT_CERT_PATH \
     --capability "/$PROGRAM_DIR/:x,/$OUTPUT_DIR/:r,stdout:r,stderr:r" \
-    --binary $PROGRAM_PATH_REMOTE=$PROGRAM_PATH_LOCAL \
+    --program-binary $PROGRAM_PATH_REMOTE=$PROGRAM_PATH_LOCAL \
     --capability "/$PROGRAM_DATA_DIR/:r,/$VIDEO_INPUT_DIR/:r,/program_internal/:rw,/$OUTPUT_DIR/:w,stdout:w,stderr:w" \
     --output-policy-file $POLICY_PATH || exit
 
