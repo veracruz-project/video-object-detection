@@ -90,11 +90,7 @@ Trick: To run VOD faster, replace the big YOLO model (`yolov3.*`) with the tiny 
   ```
 
 ### As a WebAssembly binary in `wasmtime`
-* Install [`wasmtime`](https://github.com/bytecodealliance/wasmtime):
-  ``` bash ci-run-wasmtime
-  $ curl https://wasmtime.dev/install.sh -sSf | bash && \
-  . ~/.bashrc
-  ```
+* Install [`wasmtime`](https://github.com/bytecodealliance/wasmtime)
 * Run:
   ``` bash ci-run-wasmtime
   $ mkdir -p output && \
