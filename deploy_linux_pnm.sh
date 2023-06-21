@@ -8,7 +8,8 @@ VERACRUZ_PATH="${VERACRUZ_PATH:-$HOME/veracruz}"
 POLICY_GENERATOR_PATH="${POLICY_GENERATOR_PATH:-$VERACRUZ_PATH/workspaces/host/target/$PROFILE/generate-policy}"
 CLIENT_PATH="${CLIENT_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-host/target/$PROFILE/veracruz-client}"
 SERVER_PATH="${SERVER_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-host/target/$PROFILE/veracruz-server}"
-RUNTIME_MANAGER_PATH="${RUNTIME_MANAGER_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-runtime/target/$PROFILE/runtime_manager_enclave}"
+RUNTIME_MANAGER_PATH="${RUNTIME_MANAGER_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-runtime/target/$PROFILE/$BACKEND-runtime-manager}"
+NATIVE_MODULE_SANDBOXER_PATH="${NATIVE_MODULE_SANDBOXER_PATH:-$VERACRUZ_PATH/native-module-sandboxer/build/native-module-sandboxer}"
 
 # Attestation
 VTS_PATH="/opt/veraison/vts"
@@ -28,7 +29,7 @@ PROGRAM_DIR="${PROGRAM_DIR:-program}"
 PROGRAM_DATA_DIR="${PROGRAM_DATA_DIR:-program_data}"
 VIDEO_INPUT_DIR="${VIDEO_INPUT_DIR:-video_input}"
 OUTPUT_DIR="${OUTPUT_DIR:-output}"
-PROGRAM_BASENAME="detector.wasm"
+PROGRAM_BASENAME="detector"
 PROGRAM_PATH_LOCAL="${PROGRAM_PATH_LOCAL:-./$PROGRAM_BASENAME}"
 PROGRAM_PATH_REMOTE="${PROGRAM_PATH_REMOTE:-/$PROGRAM_DIR/$PROGRAM_BASENAME}"
 COCO_BASENAME="coco.names"
@@ -136,8 +137,14 @@ $POLICY_GENERATOR_PATH \
     --certificate $RESULT_CLIENT_CERT_PATH \
     --capability "/$PROGRAM_DIR/:x,/$OUTPUT_DIR/:r,stdout:r,stderr:r" \
     --program-binary $PROGRAM_PATH_REMOTE=$PROGRAM_PATH_LOCAL \
-    --capability "/$PROGRAM_DATA_DIR/:r,/$VIDEO_INPUT_DIR/:r,/program_internal/:rw,/$OUTPUT_DIR/:w,stdout:w,stderr:w" \
+    --capability "/$PROGRAM_DIR/:r,/$PROGRAM_DATA_DIR/:r,/$VIDEO_INPUT_DIR/:r,/program_internal/:rw,/$OUTPUT_DIR/:w,stdout:w,stderr:w" \
     --output-policy-file $POLICY_PATH || exit
+
+
+
+echo "=============Preparing native module sandboxer"
+mkdir -p /tmp/nmm || exit
+cp -a $NATIVE_MODULE_SANDBOXER_PATH /tmp/nmm || exit
 
 
 
