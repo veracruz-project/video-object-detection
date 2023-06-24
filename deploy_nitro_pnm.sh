@@ -7,7 +7,7 @@ VERACRUZ_PATH="${VERACRUZ_PATH:-$HOME/veracruz}"
 # Binaries
 POLICY_GENERATOR_PATH="${POLICY_GENERATOR_PATH:-$VERACRUZ_PATH/workspaces/host/target/$PROFILE/generate-policy}"
 CLIENT_PATH="${CLIENT_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-host/target/$PROFILE/veracruz-client}"
-SERVER_PATH="${SERVER_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-host/target/$PROFILE/veracruz-server}"
+SERVER_PATH="${SERVER_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-host/target/$PROFILE/$BACKEND-veracruz-server}"
 EIF_PATH="${EIF_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-runtime/runtime_manager.eif}"
 PCR0_PATH="${PCR0_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-runtime/PCR0}"
 NATIVE_MODULE_SANDBOXER_PATH="${NATIVE_MODULE_SANDBOXER_PATH:-$VERACRUZ_PATH/native-module-sandboxer/build/native-module-sandboxer}"
@@ -92,7 +92,7 @@ set -- "${ARGS[@]}"
 
 
 echo "=============Killing components"
-killall -9 proxy_attestation_server veracruz-server veracruz-client runtime_enclave_binary
+killall -9 proxy_attestation_server $BACKEND-veracruz-server veracruz-client runtime_enclave_binary
 $PROXY_CLEANUP_SCRIPT_PATH || true
 nitro-cli terminate-enclave --all || exit
 
@@ -232,6 +232,6 @@ RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
 
 
 echo "=============Killing components"
-killall -9 proxy_attestation_server veracruz-server veracruz-client runtime_enclave_binary
+killall -9 proxy_attestation_server $BACKEND-veracruz-server veracruz-client runtime_enclave_binary
 $PROXY_CLEANUP_SCRIPT_PATH || true
 nitro-cli terminate-enclave --all || exit
