@@ -159,7 +159,7 @@ curl -X POST -H 'Content-Type: application/corim-unsigned+cbor; profile=http://a
 
 if [ -z $SERVERLESS ]; then 
     echo "=============Running veracruz server"
-    RUST_LOG=error $SERVER_PATH $POLICY_PATH &> $SERVER_LOG &
+    RUST_LOG=error RUNTIME_ENCLAVE_BINARY_PATH=$RUNTIME_MANAGER_PATH $SERVER_PATH $POLICY_PATH &> $SERVER_LOG &
 fi
 
 
