@@ -1,0 +1,87 @@
+name: VOD-CI
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+env:
+  WASMTIME_VERSION: v9.0.1
+jobs:
+  vod-deployment:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/veracruz-project/veracruz/ci@sha256:38add618b42f59a89fdd4c46831dcf9c9e73b159bc74c87251c8263a2ec6238a
+      volumes:
+        - ${{ github.workspace }}:/work/video-object-detection
+    steps:
+      - name: Check out the VOD repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          set-safe-directory: true
+      - name: Build
+        run: |
+          # grab every bash code block for this step, remove line continuation,
+          # and only keep lines that start with '$' (of course removing that '$'
+          # in the process)
+          sed -n '/```.*vod-ci-build/,/```/{/```/d; p}' README.md \
+            | sed ':a; /\\$/{N; s/\\\n//; ta}' \
+            | sed -n '/^ *\$/{s/^ *\$ \?//; p}' \
+            > README.md.vod-ci-build.sh
+          # run the script
+          bash -euxo pipefail README.md.vod-ci-build.sh
+          # Add current directory to $GITHUB_PATH
+          echo "$GITHUB_WORKSPACE" >> $GITHUB_PATH
+      - name: Download example video
+        run: |
+          # grab every bash code block for this step, remove line continuation,
+          # and only keep lines that start with '$' (of course removing that '$'
+          # in the process)
+          sed -n '/```.*vod-ci-video/,/```/{/```/d; p}' README.md \
+            | sed ':a; /\\$/{N; s/\\\n//; ta}' \
+            | sed -n '/^ *\$/{s/^ *\$ \?//; p}' \
+            > README.md.vod-ci-video.sh
+          # run the script
+          bash -euxo pipefail README.md.vod-ci-video.sh
+      - name: Replace big YOLO model with small one
+        run: |
+          cd program_data
+          ln -sf yolov3-tiny.cfg yolov3.cfg
+          ln -sf yolov3-tiny.weights yolov3.weights
+      - name: Run VOD as standalone native binary
+        run: |
+          # grab every bash code block for this step, remove line continuation,
+          # and only keep lines that start with '$' (of course removing that '$'
+          # in the process)
+          sed -n '/```.*vod-ci-run-native/,/```/{/```/d; p}' README.md \
+            | sed ':a; /\\$/{N; s/\\\n//; ta}' \
+            | sed -n '/^ *\$/{s/^ *\$ \?//; p}' \
+            > README.md.vod-ci-run-native.sh
+          # run the script
+          bash -euxo pipefail README.md.vod-ci-run-native.sh
+          # Check results
+          file output/prediction.0.jpg | grep "JPEG image data"
+          rm -rf output
+      - name: Run VOD in wasmtime
+        run: |
+          # Install wasmtime
+          curl https://wasmtime.dev/install.sh -sSf | bash -s -- --version $WASMTIME_VERSION && \
+          . ~/.bashrc
+          # grab every bash code block for this step, remove line continuation,
+          # and only keep lines that start with '$' (of course removing that '$'
+          # in the process)
+          sed -n '/```.*vod-ci-run-wasmtime/,/```/{/```/d; p}' README.md \
+            | sed ':a; /\\$/{N; s/\\\n//; ta}' \
+            | sed -n '/^ *\$/{s/^ *\$ \?//; p}' \
+            > README.md.vod-ci-run-wasmtime.sh
+          # run the script
+          bash -euxo pipefail README.md.vod-ci-run-wasmtime.sh
+          # Check results
+          file output/prediction.0.jpg | grep "JPEG image data"
