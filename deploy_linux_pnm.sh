@@ -64,6 +64,7 @@ POLICY_PATH="${POLICY_PATH:-policy.json}"
 PROXY_CLEANUP_SCRIPT_PATH="${PROXY_CLEANUP_SCRIPT_PATH:-$VERACRUZ_PATH/proxy_cleanup.sh}"
 
 SERVER_LOG="${SERVER_LOG:-server.log}"
+SERVER_TIMEOUT="${SERVER_TIMEOUT:-60}"
 
 # Parse arguments
 ARGS=()
@@ -172,9 +173,13 @@ fi
 
 
 echo "=============Waiting for veracruz server to be ready"
-while true; do
-        echo -n | telnet $VC_SERVER_ADDRESS $VC_SERVER_PORT 2>/dev/null | grep "^Connected to" && break
-        sleep 1
+for ((i=0;;i++)); do
+    if [ $i -ge $SERVER_TIMEOUT ]; then
+        echo "Server not ready after ${i}s. See log for more details. Terminating"
+        exit
+    fi
+    echo -n | telnet $VC_SERVER_ADDRESS $VC_SERVER_PORT 2>/dev/null | grep "^Connected to" && break
+    sleep 1
 done
 
 
