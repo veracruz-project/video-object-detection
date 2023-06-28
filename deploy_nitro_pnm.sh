@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Deploy VOD on Nitro as a provisioned native module
+# This is not supported yet. Don't run this script
+
 BACKEND="nitro"
 PROFILE="${PROFILE:-debug}"
 VERACRUZ_PATH="${VERACRUZ_PATH:-$HOME/veracruz}"

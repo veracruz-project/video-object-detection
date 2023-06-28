@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Deploy VOD on Linux as a provisioned native module
+
 BACKEND="linux"
 PROFILE="${PROFILE:-debug}"
 VERACRUZ_PATH="${VERACRUZ_PATH:-$HOME/veracruz}"
