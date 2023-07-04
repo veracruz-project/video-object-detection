@@ -5,7 +5,7 @@ The video decoder uses [`openh264`](https://github.com/veracruz-project/openh264
 
 ## Build and setup
 * Install [`wasi sdk 14`](https://github.com/WebAssembly/wasi-sdk) and set `WASI_SDK_ROOT` to point to its installation directory:
-  ``` bash ci-build
+  ``` bash vod-ci-build veracruz-ci-build
   $ export WASI_VERSION=14 && \
   export WASI_VERSION_FULL=${WASI_VERSION}.0 && \
   wget https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_VERSION}/wasi-sdk-${WASI_VERSION_FULL}-linux.tar.gz && \
@@ -14,7 +14,7 @@ The video decoder uses [`openh264`](https://github.com/veracruz-project/openh264
   . ~/.bashrc
   ```
 * Install `nasm` (Ubuntu):
-  ``` bash ci-build
+  ``` bash vod-ci-build veracruz-ci-build
   $ apt-get update && apt-get install -y nasm
   ```
 * Clone the repo and update the submodules:
@@ -24,15 +24,15 @@ The video decoder uses [`openh264`](https://github.com/veracruz-project/openh264
   git submodule update --init
   ```
 * Build [`openh264`](https://github.com/veracruz-project/openh264), [`openh264-dec`](https://github.com/veracruz-project/openh264-dec), [`darknet`](https://github.com/veracruz-project/darknet) and the main program (VOD) to WebAssembly:
-  ``` bash ci-build
+  ``` bash vod-ci-build veracruz-ci-build
   $ make
   ```
 * Build VOD as a native binary (optional):
-  ``` bash ci-build
+  ``` bash vod-ci-build veracruz-ci-build
   $ make -f Makefile_native
   ```
 * Download the YOLO models and configuration files and the COCO object list:
-  ``` bash ci-build
+  ``` bash vod-ci-build veracruz-ci-build
   $ mkdir -p program_data && \
   wget -P program_data \
   https://github.com/veracruz-project/video-object-detection/releases/download/20230406/yolov3.weights \
@@ -57,7 +57,7 @@ The video decoder uses [`openh264`](https://github.com/veracruz-project/openh264
   $ ffmpeg -i in.mp4 -map 0:0 -vcodec copy -an -f h264 in.h264
   ```
 * Note that an example H264 video is available in the release assets:
-  ``` bash ci-video
+  ``` bash vod-ci-video veracruz-ci-video
   $ mkdir -p video_input && \
   wget -P video_input https://github.com/veracruz-project/video-object-detection/releases/download/20230406/in.h264
   ```
@@ -84,7 +84,7 @@ Trick: To run VOD faster, replace the big YOLO model (`yolov3.*`) with the tiny 
 ### As a standalone native binary
 * Build as a native binary (cf. build steps above)
 * Run:
-  ``` bash ci-run-native
+  ``` bash vod-ci-run-native veracruz-ci-run-native
   $ mkdir -p output && \
   ./detector
   ```
@@ -92,7 +92,7 @@ Trick: To run VOD faster, replace the big YOLO model (`yolov3.*`) with the tiny 
 ### As a WebAssembly binary in `wasmtime`
 * Install [`wasmtime`](https://github.com/bytecodealliance/wasmtime)
 * Run:
-  ``` bash ci-run-wasmtime
+  ``` bash vod-ci-run-wasmtime veracruz-ci-run-wasmtime
   $ mkdir -p output && \
   wasmtime --dir=. detector.wasm
   ```
@@ -100,7 +100,7 @@ Trick: To run VOD faster, replace the big YOLO model (`yolov3.*`) with the tiny 
 ### As a WebAssembly binary in the [`freestanding execution engine`](https://github.com/veracruz-project/veracruz/tree/main/sdk/freestanding-execution-engine)
 * [Build the freestanding execution engine](https://github.com/veracruz-project/veracruz/tree/main/sdk/freestanding-execution-engine)
 * Run:
-  ``` bash ci-run-fee
+  ``` bash veracruz-ci-run-fee
   $ mkdir -p program && \
   cp detector.wasm program && \
   mkdir -p output && \
