@@ -66,6 +66,8 @@ POLICY_PATH="${POLICY_PATH:-policy.json}"
 PROXY_CLEANUP_SCRIPT_PATH="${PROXY_CLEANUP_SCRIPT_PATH:-$VERACRUZ_PATH/proxy_cleanup.sh}"
 
 SERVER_LOG="${SERVER_LOG:-server.log}"
+SERVER_ATTEMPTS="${SERVER_ATTEMPTS:-60}"
+SERVER_TIMEOUT="${SERVER_TIMEOUT:-5}"
 
 # Parse arguments
 ARGS=()
@@ -110,11 +112,11 @@ for i in "$PROGRAM_CLIENT_CERT_PATH $PROGRAM_CLIENT_KEY_PATH" "$DATA_CLIENT_CERT
     set -- $i
     if [ ! -f $1 ] || [ ! -f $2 ]; then
         echo "=============Generating $1 and $2"
-        openssl ecparam -name prime256v1 -genkey > $2 || exit
+        openssl ecparam -name prime256v1 -genkey > $2 || exit 1
         openssl req -x509 \
             -key $2 \
             -out $1 \
-            -config $CERT_CONF_PATH || exit
+            -config $CERT_CONF_PATH || exit 1
     fi
 done
 
@@ -140,13 +142,13 @@ $POLICY_GENERATOR_PATH \
     --capability "/$PROGRAM_DIR/:x,/$OUTPUT_DIR/:r,stdout:r,stderr:r" \
     --program-binary $PROGRAM_PATH_REMOTE=$PROGRAM_PATH_LOCAL \
     --capability "/$PROGRAM_DIR/:r,/$PROGRAM_DATA_DIR/:r,/$VIDEO_INPUT_DIR/:r,/program_internal/:rw,/$OUTPUT_DIR/:w,stdout:w,stderr:w" \
-    --output-policy-file $POLICY_PATH || exit
+    --output-policy-file $POLICY_PATH || exit 1
 
 
 
 echo "=============Preparing native module sandboxer"
-mkdir -p /tmp/nmm || exit
-cp -a $NATIVE_MODULE_SANDBOXER_PATH /tmp/nmm || exit
+mkdir -p /tmp/nmm || exit 1
+cp -a $NATIVE_MODULE_SANDBOXER_PATH /tmp/nmm || exit 1
 
 
 
@@ -161,8 +163,8 @@ sleep 5
 
 
 echo "=============Provisioning attestation personalities"
-curl -X POST -H 'Content-Type: application/corim-unsigned+cbor; profile=http://arm.com/psa/iot/1' --data-binary "@/opt/veraison/psa_corim.cbor" $PROVISIONING_SERVER_ADDRESS:$PROVISIONING_SERVER_PORT/endorsement-provisioning/v1/submit || exit
-curl -X POST -H 'Content-Type: application/corim-unsigned+cbor; profile=http://aws.com/nitro' --data-binary "@/opt/veraison/nitro_corim.cbor" $PROVISIONING_SERVER_ADDRESS:$PROVISIONING_SERVER_PORT/endorsement-provisioning/v1/submit || exit
+curl -X POST -H 'Content-Type: application/corim-unsigned+cbor; profile=http://arm.com/psa/iot/1' --data-binary "@/opt/veraison/psa_corim.cbor" $PROVISIONING_SERVER_ADDRESS:$PROVISIONING_SERVER_PORT/endorsement-provisioning/v1/submit || exit 1
+curl -X POST -H 'Content-Type: application/corim-unsigned+cbor; profile=http://aws.com/nitro' --data-binary "@/opt/veraison/nitro_corim.cbor" $PROVISIONING_SERVER_ADDRESS:$PROVISIONING_SERVER_PORT/endorsement-provisioning/v1/submit || exit 1
 
 
 
@@ -174,9 +176,13 @@ fi
 
 
 echo "=============Waiting for veracruz server to be ready"
-while true; do
-        echo -n | telnet $VC_SERVER_ADDRESS $VC_SERVER_PORT 2>/dev/null | grep "^Connected to" && break
-        sleep 1
+for ((i=0;;i++)); do
+    if [ $i -ge $SERVER_ATTEMPTS ]; then
+        echo "Server not ready after ${i} attempts. See log for more details. Terminating"
+        exit 1
+    fi
+    echo -n | timeout $SERVER_TIMEOUT telnet $VC_SERVER_ADDRESS $VC_SERVER_PORT 2>/dev/null | grep "^Connected to" && break
+    sleep 1
 done
 
 
@@ -195,19 +201,19 @@ RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
     --data $YOLOV3_CFG_PATH_REMOTE=$YOLOV3_CFG_PATH_LOCAL \
     --data $YOLOV3_WEIGHTS_PATH_REMOTE=$YOLOV3_WEIGHTS_PATH_LOCAL \
     --identity $DATA_CLIENT_CERT_PATH \
-    --key $DATA_CLIENT_KEY_PATH || exit
+    --key $DATA_CLIENT_KEY_PATH || exit 1
 
 echo "=============Provisioning video"
 RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
     --data $INPUT_VIDEO_PATH_REMOTE=$INPUT_VIDEO_PATH_LOCAL \
     --identity $VIDEO_CLIENT_CERT_PATH \
-    --key $VIDEO_CLIENT_KEY_PATH || exit
+    --key $VIDEO_CLIENT_KEY_PATH || exit 1
 
 echo "=============Requesting computation"
 RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
     --compute $PROGRAM_PATH_REMOTE \
     --identity $RESULT_CLIENT_CERT_PATH \
-    --key $RESULT_CLIENT_KEY_PATH || exit
+    --key $RESULT_CLIENT_KEY_PATH || exit 1
 
 echo "=============Querying results (stdout and stderr)"
 dump=$(RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
