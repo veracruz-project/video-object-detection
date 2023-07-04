@@ -65,6 +65,7 @@ PROXY_CLEANUP_SCRIPT_PATH="${PROXY_CLEANUP_SCRIPT_PATH:-$VERACRUZ_PATH/proxy_cle
 
 SERVER_LOG="${SERVER_LOG:-server.log}"
 SERVER_ATTEMPTS="${SERVER_ATTEMPTS:-60}"
+SERVER_TIMEOUT="${SERVER_TIMEOUT:-5}"
 
 # Parse arguments
 ARGS=()
@@ -178,7 +179,7 @@ for ((i=0;;i++)); do
         echo "Server not ready after ${i} attempts. See log for more details. Terminating"
         exit
     fi
-    echo -n | telnet $VC_SERVER_ADDRESS $VC_SERVER_PORT 2>/dev/null | grep "^Connected to" && break
+    echo -n | timeout $SERVER_TIMEOUT telnet $VC_SERVER_ADDRESS $VC_SERVER_PORT 2>/dev/null | grep "^Connected to" && break
     sleep 1
 done
 
