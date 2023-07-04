@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Deploy VOD on Linux as a WASM binary
+
 BACKEND="linux"
 PROFILE="${PROFILE:-debug}"
 VERACRUZ_PATH="${VERACRUZ_PATH:-$HOME/veracruz}"

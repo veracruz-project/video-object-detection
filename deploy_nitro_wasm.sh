@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Deploy VOD on Nitro as a WASM binary
+
 BACKEND="nitro"
 PROFILE="${PROFILE:-debug}"
 VERACRUZ_PATH="${VERACRUZ_PATH:-$HOME/veracruz}"
