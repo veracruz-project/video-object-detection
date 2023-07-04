@@ -65,7 +65,7 @@ PROXY_CLEANUP_SCRIPT_PATH="${PROXY_CLEANUP_SCRIPT_PATH:-$VERACRUZ_PATH/proxy_cle
 
 NITRO_LOG="${NITRO_LOG:-nitro.log}"
 SERVER_LOG="${SERVER_LOG:-server.log}"
-SERVER_TIMEOUT="${SERVER_TIMEOUT:-60}"
+SERVER_ATTEMPTS="${SERVER_ATTEMPTS:-60}"
 
 # Parse arguments
 ARGS=()
@@ -170,8 +170,8 @@ fi
 
 echo "=============Waiting for veracruz server to be ready"
 for ((i=0;;i++)); do
-    if [ $i -ge $SERVER_TIMEOUT ]; then
-        echo "Server not ready after ${i}s. See log for more details. Terminating"
+    if [ $i -ge $SERVER_ATTEMPTS ]; then
+        echo "Server not ready after ${i} attempts. See log for more details. Terminating"
         exit
     fi
     echo -n | telnet $VC_SERVER_ADDRESS $VC_SERVER_PORT 2>/dev/null | grep "^Connected to" && break
