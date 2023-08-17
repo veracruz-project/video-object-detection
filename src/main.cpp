@@ -26,6 +26,23 @@ extern "C"
 
 #include <string.h>
 
+#include <grpcpp/grpcpp.h>
+#include "helloworld.grpc.pb.h"
+#include <grpcpp/ext/proto_server_reflection_plugin.h>
+
+using grpc::Server;
+using grpc::ServerAsyncWriter;
+using grpc::ServerCompletionQueue;
+using grpc::ServerBuilder;
+using grpc::ServerContext;
+using grpc::Status;
+using helloworld::Greeter;
+using helloworld::ProcessRequest;
+using helloworld::FrameStatus;
+
+grpc::ServerAsyncWriter<FrameStatus>* WRITER;
+void* TAG;
+std::shared_ptr<ServerCompletionQueue> COMPLETION_QUEUE;
 
 /* Keep track of the number of frames processed */
 int frames_processed = 0;
@@ -117,6 +134,29 @@ void run_darknet_detector(image im, image im_sized, float objectness_thresh,
         print_detection_probabilities(im, dets, nboxes, class_thresh, names,
                                       l.classes);
     }
+    FrameStatus status;
+    status.set_frame_count(frames_processed);
+    for (int i = 0; i < nboxes; i++) {
+        for (int j = 0; j < l.classes; j++) {
+            if (dets[i].prob[j] > class_thresh) {
+                auto* name = status.add_names();
+                name->assign(names[j]);
+                status.add_probabilities(dets[i].prob[j]);
+            }
+        }
+    }
+
+    printf("Writing. Tag %p\n", TAG);
+    grpc::WriteOptions opts;
+    opts.set_write_through();
+    WRITER->Write(status, opts, TAG);
+    void* tag = reinterpret_cast<void*>(0xfffffffff);
+    bool ok;
+    while (tag != TAG) {
+        COMPLETION_QUEUE->Next(&tag, &ok);
+    }
+    TAG++;
+    
     free_detections(dets, nboxes);
 
     free_image(im);
@@ -159,32 +199,133 @@ void on_frame_ready(SBufferInfo *bufInfo)
     frames_processed++;
 }
 
+class GreeterServerImpl final {
+ public:
+  ~GreeterServerImpl() {
+    server_->Shutdown();
+    cq_->Shutdown();
+  }
+
+  void Run() {
+    std::string server_address = "unix:///services/detector.sock";
+
+    ServerBuilder builder;
+    builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+    builder.RegisterService(&service_);
+    cq_ = builder.AddCompletionQueue();
+    COMPLETION_QUEUE = cq_;
+    server_ = builder.BuildAndStart();
+    std::cout << "Server listening on " << server_address << std::endl;
+
+    HandleRpcs();
+  }
+
+ private:
+  class CallData {
+   public:
+    CallData(Greeter::AsyncService* service, ServerCompletionQueue* cq)
+        : service_(service), cq_(cq), responder_(&ctx_), status_(CREATE) {
+      Proceed();
+    }
+
+    void Proceed() {
+      if (status_ == CREATE) {
+        status_ = PROCESS;
+
+        service_->RequestProcessVideo(&ctx_, &request_, &responder_, cq_, cq_,
+                                  this);
+      } else if (status_ == PROCESS) {
+        new CallData(service_, cq_);
+
+        WRITER = &responder_;
+        TAG = 0;
+
+        double time;
+        const char *input_file = request_.path().c_str();
+        char *name_list_file = "program_data/coco.names";
+        char *cfgfile = "program_data/yolov3-tiny.cfg";
+        char *weightfile = "program_data/yolov3-tiny.weights";
+        
+        // XXX: Box annotation is temporarily disabled until we find a way to
+        // efficiently provision a batch of files to the enclave (file archive?)
+        bool annotate_boxes = false;
+
+        printf("Initializing detector...\n");
+        time  = what_time_is_it_now();
+        init_darknet_detector(name_list_file, cfgfile, weightfile, annotate_boxes);
+        printf("Arguments loaded and network parsed: %lf seconds\n",
+                    what_time_is_it_now() - time);
+
+        printf("Starting decoding...\n");
+        time  = what_time_is_it_now();
+
+        int x = h264_decode(input_file, "", false, &on_frame_ready);
+        printf("Finished decoding: %lf seconds\n",
+                    what_time_is_it_now() - time);
+        if (frames_processed == 0)
+            printf("No frames were processed. The input video was whether empty or not an H.264 video\n");
+
+        // And we are done! Let the gRPC runtime know we've finished, using the
+        // memory address of this instance as the uniquely identifying tag for
+        // the event.
+        status_ = FINISH;
+        responder_.Finish(Status::OK, this);
+      } else {
+        GPR_ASSERT(status_ == FINISH);
+        // Once in the FINISH state, deallocate ourselves (CallData).
+        delete this;
+      }
+    }
+
+   private:
+    Greeter::AsyncService* service_;
+    ServerCompletionQueue* cq_;
+    ServerContext ctx_;
+
+    ProcessRequest request_;
+
+    ServerAsyncWriter<FrameStatus> responder_;
+
+    enum CallStatus { CREATE, PROCESS, FINISH };
+    CallStatus status_;  
+  };
+
+  // This can be run in multiple threads if needed.
+  void HandleRpcs() {
+    // Spawn a new CallData instance to serve new clients.
+    new CallData(&service_, cq_.get());
+    void* tag;  // uniquely identifies a request.
+    bool ok;
+    while (true) {
+      // Block waiting to read the next event from the completion queue. The
+      // event is uniquely identified by its tag, which in this case is the
+      // memory address of a CallData instance.
+      // The return value of Next should always be checked. This return value
+      // tells us whether there is any kind of event or cq_ is shutting down.
+      GPR_ASSERT(cq_->Next(&tag, &ok));
+      GPR_ASSERT(ok);
+      static_cast<CallData*>(tag)->Proceed();
+    }
+  }
+
+  std::shared_ptr<ServerCompletionQueue> cq_;
+  Greeter::AsyncService service_;
+  std::unique_ptr<Server> server_;
+};
+
+// Logic and data behind the server's behavior.
+class GreeterServiceImpl final : public Greeter::Service {
+  Status ProcessVideo(ServerContext* context, const ProcessRequest* request,
+                  grpc::ServerWriter<FrameStatus>* writer) override {
+    return Status::OK;
+  }
+};
 /* Run the object detection model on each decoded frame */
 int main(int argc, char **argv)
 {
-    double time;
-    char *input_file = "video_input/in.h264";
-    char *name_list_file = "program_data/coco.names";
-    char *cfgfile = "program_data/yolov3.cfg";
-    char *weightfile = "program_data/yolov3.weights";
-    // XXX: Box annotation is temporarily disabled until we find a way to
-    // efficiently provision a batch of files to the enclave (file archive?)
-    bool annotate_boxes = false;
-
-    printf("Initializing detector...\n");
-    time  = what_time_is_it_now();
-    init_darknet_detector(name_list_file, cfgfile, weightfile, annotate_boxes);
-    printf("Arguments loaded and network parsed: %lf seconds\n",
-                what_time_is_it_now() - time);
-
-    printf("Starting decoding...\n");
-    time  = what_time_is_it_now();
-    int x = h264_decode(input_file, "", false, &on_frame_ready);
-    printf("Finished decoding: %lf seconds\n",
-                what_time_is_it_now() - time);
-    if (frames_processed == 0)
-        printf("No frames were processed. The input video was whether empty or not an H.264 video\n");
+    GreeterServerImpl server;
+    server.Run();
 
 
-    return x;
+    return 0;
 }
