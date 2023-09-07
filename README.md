@@ -110,6 +110,6 @@ Trick: To run VOD faster, replace the big YOLO model (`yolov3.*`) with the tiny 
 ## End-to-end Veracruz deployment
 An application (program, data and policy) can't be validated until the program and data are provisioned by a Veracruz client to the Runtime Manager, the policy gets verified and the program successfully executes within the enclave.  
 The crux of an end-to-end deployment is to get the policy file right. To that end, a collection of deployment scripts are provided and take care of generating the certificates and the policy based on the program's [file tree](#file-tree).
-* [Build Veracruz](https://github.com/veracruz-project/veracruz/blob/main/BUILD_INSTRUCTIONS.markdown)
+* [Build Veracruz](https://github.com/veracruz-project/veracruz/blob/main/docker/README.md)
 * Depending on your environment and how you want to run VOD (WebAssembly program or provisioned native module), run the appropriate deployment script (`./deploy_*.sh`) inside a Docker container (the same as the one used to build Veracruz). This will generate the policy, deploy the Veracruz components and run the computation. Note that you must separately build the native module sandboxer prior to running dynamic or provisioned native modules. Also note that provisioned native modules are not supported on Nitro yet, so just ignore `deploy_nitro_pnm.sh` for now
 * The prediction images can be found in the executing directory
