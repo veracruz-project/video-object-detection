@@ -104,7 +104,7 @@ Trick: To run VOD faster, replace the big YOLO model (`yolov3.*`) with the tiny 
   $ mkdir -p program && \
   cp detector.wasm program && \
   mkdir -p output && \
-  RUST_LOG=info RUST_BACKTRACE=1 freestanding-execution-engine -i video_input program program_data -o output -r program/detector.wasm -x jit -c -d -e
+  RUST_LOG=info RUST_BACKTRACE=1 freestanding-execution-engine -i video_input -i program -i program_data -i output -r program/detector.wasm
   ```
 
 ## End-to-end Veracruz deployment
