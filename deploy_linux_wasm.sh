@@ -32,19 +32,19 @@ VIDEO_INPUT_DIR="${VIDEO_INPUT_DIR:-video_input}"
 OUTPUT_DIR="${OUTPUT_DIR:-output}"
 PROGRAM_BASENAME="detector.wasm"
 PROGRAM_PATH_LOCAL="${PROGRAM_PATH_LOCAL:-./$PROGRAM_BASENAME}"
-PROGRAM_PATH_REMOTE="${PROGRAM_PATH_REMOTE:-/$PROGRAM_DIR/$PROGRAM_BASENAME}"
+PROGRAM_PATH_REMOTE="${PROGRAM_PATH_REMOTE:-./$PROGRAM_DIR/$PROGRAM_BASENAME}"
 COCO_BASENAME="coco.names"
 COCO_PATH_LOCAL="${COCO_PATH_LOCAL:-$PROGRAM_DATA_DIR/$COCO_BASENAME}"
-COCO_PATH_REMOTE="${COCO_PATH_REMOTE:-/$PROGRAM_DATA_DIR/$COCO_BASENAME}"
+COCO_PATH_REMOTE="${COCO_PATH_REMOTE:-./$PROGRAM_DATA_DIR/$COCO_BASENAME}"
 YOLOV3_CFG_BASENAME="yolov3.cfg"
 YOLOV3_CFG_PATH_LOCAL="${YOLOV3_CFG_PATH_LOCAL:-$PROGRAM_DATA_DIR/$YOLOV3_CFG_BASENAME}"
-YOLOV3_CFG_PATH_REMOTE="${YOLOV3_CFG_PATH_REMOTE:-/$PROGRAM_DATA_DIR/$YOLOV3_CFG_BASENAME}"
+YOLOV3_CFG_PATH_REMOTE="${YOLOV3_CFG_PATH_REMOTE:-./$PROGRAM_DATA_DIR/$YOLOV3_CFG_BASENAME}"
 YOLOV3_WEIGHTS_BASENAME="yolov3.weights"
 YOLOV3_WEIGHTS_PATH_LOCAL="${YOLOV3_WEIGHTS_PATH_LOCAL:-$PROGRAM_DATA_DIR/$YOLOV3_WEIGHTS_BASENAME}"
-YOLOV3_WEIGHTS_PATH_REMOTE="${YOLOV3_WEIGHTS_PATH_REMOTE:-/$PROGRAM_DATA_DIR/$YOLOV3_WEIGHTS_BASENAME}"
+YOLOV3_WEIGHTS_PATH_REMOTE="${YOLOV3_WEIGHTS_PATH_REMOTE:-./$PROGRAM_DATA_DIR/$YOLOV3_WEIGHTS_BASENAME}"
 INPUT_VIDEO_BASENAME="in.h264"
 INPUT_VIDEO_PATH_LOCAL="${INPUT_VIDEO_PATH_LOCAL:-$VIDEO_INPUT_DIR/$INPUT_VIDEO_BASENAME}"
-INPUT_VIDEO_PATH_REMOTE="${INPUT_VIDEO_PATH_REMOTE:-/$VIDEO_INPUT_DIR/$INPUT_VIDEO_BASENAME}"
+INPUT_VIDEO_PATH_REMOTE="${INPUT_VIDEO_PATH_REMOTE:-./$VIDEO_INPUT_DIR/$INPUT_VIDEO_BASENAME}"
 
 # PKI
 CA_CERT_CONF_PATH="${CA_CERT_CONF_PATH:-$VERACRUZ_PATH/workspaces/ca-cert.conf}"
@@ -124,23 +124,16 @@ done
 echo "=============Generating policy"
 $POLICY_GENERATOR_PATH \
     --max-memory-mib 2000 \
-    --enclave-debug-mode \
-    --enable-clock \
     --proxy-attestation-server-ip $PAS_ADDRESS:$PAS_PORT \
     --proxy-attestation-server-cert $CA_CERT_PATH \
     --veracruz-server-ip $VC_SERVER_ADDRESS:$VC_SERVER_PORT \
     --certificate-expiry "$(date --rfc-2822 -d 'now + 100 days')" \
     --css-file $RUNTIME_MANAGER_PATH \
-    --certificate $PROGRAM_CLIENT_CERT_PATH \
-    --capability "/$PROGRAM_DIR/:w" \
-    --certificate $DATA_CLIENT_CERT_PATH \
-    --capability "/$PROGRAM_DATA_DIR/:w" \
-    --certificate $VIDEO_CLIENT_CERT_PATH \
-    --capability "/$VIDEO_INPUT_DIR/:w" \
-    --certificate $RESULT_CLIENT_CERT_PATH \
-    --capability "/$PROGRAM_DIR/:x,/$OUTPUT_DIR/:r,stdout:r,stderr:r" \
-    --program-binary $PROGRAM_PATH_REMOTE=$PROGRAM_PATH_LOCAL \
-    --capability "/$PROGRAM_DATA_DIR/:r,/$VIDEO_INPUT_DIR/:r,/program_internal/:rw,/$OUTPUT_DIR/:w,stdout:w,stderr:w" \
+    --certificate "$PROGRAM_CLIENT_CERT_PATH => ./$PROGRAM_DIR/:w" \
+    --certificate "$DATA_CLIENT_CERT_PATH => ./$PROGRAM_DATA_DIR/:w" \
+    --certificate "$VIDEO_CLIENT_CERT_PATH => ./$VIDEO_INPUT_DIR/:w" \
+    --certificate "$RESULT_CLIENT_CERT_PATH => ./$PROGRAM_DIR/:x,./$OUTPUT_DIR/:r" \
+    --program-binary "$PROGRAM_PATH_REMOTE=$PROGRAM_PATH_LOCAL => ./$PROGRAM_DATA_DIR/:r,./$VIDEO_INPUT_DIR/:r,./program_internal/:rw,./$OUTPUT_DIR/:w" \
     --output-policy-file $POLICY_PATH || exit 1
 
 
@@ -208,22 +201,9 @@ RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
     --identity $RESULT_CLIENT_CERT_PATH \
     --key $RESULT_CLIENT_KEY_PATH || exit 1
 
-echo "=============Querying results (stdout and stderr)"
-dump=$(RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
-    --result stdout=- \
-    --result stderr=- \
-    --identity $RESULT_CLIENT_CERT_PATH \
-    --key $RESULT_CLIENT_KEY_PATH \
-    -n)
-echo "$dump"
-frame_count=$(echo "$dump" | grep "^Frames:" | awk '{print $2}')
-
 echo "=============Querying results (predictions)"
-for ((i=0;i<frame_count;i++)); do
-       result_line="$result_line --result /$OUTPUT_DIR/prediction.$i.jpg=prediction.$i.jpg"
-done
 RUST_LOG=error $CLIENT_PATH $POLICY_PATH \
-    $result_line \
+    --result "./$OUTPUT_DIR/prediction.0.jpg=prediction.0.jpg" \
     --identity $RESULT_CLIENT_CERT_PATH \
     --key $RESULT_CLIENT_KEY_PATH
 
