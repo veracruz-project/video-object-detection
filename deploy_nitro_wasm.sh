@@ -127,8 +127,6 @@ done
 echo "=============Generating policy"
 $POLICY_GENERATOR_PATH \
     --max-memory-mib 2000 \
-    --enclave-debug-mode \
-    --enable-clock \
     --proxy-attestation-server-ip $PAS_ADDRESS:$PAS_PORT \
     --proxy-attestation-server-cert $CA_CERT_PATH \
     --veracruz-server-ip $VC_SERVER_ADDRESS:$VC_SERVER_PORT \
