@@ -125,8 +125,6 @@ done
 echo "=============Generating policy"
 $POLICY_GENERATOR_PATH \
     --max-memory-mib 2000 \
-    --enclave-debug-mode \
-    --enable-clock \
     --proxy-attestation-server-ip $PAS_ADDRESS:$PAS_PORT \
     --proxy-attestation-server-cert $CA_CERT_PATH \
     --veracruz-server-ip $VC_SERVER_ADDRESS:$VC_SERVER_PORT \
@@ -165,7 +163,7 @@ curl -X POST -H 'Content-Type: application/corim-unsigned+cbor; profile=http://a
 
 if [ -z $SERVERLESS ]; then 
     echo "=============Running veracruz server"
-    RUST_LOG=error RUNTIME_ENCLAVE_BINARY_PATH=$RUNTIME_MANAGER_PATH $SERVER_PATH $POLICY_PATH &> $SERVER_LOG &
+    RUST_LOG=info RUNTIME_ENCLAVE_BINARY_PATH=$RUNTIME_MANAGER_PATH $SERVER_PATH $POLICY_PATH &> $SERVER_LOG &
 fi
 
 
