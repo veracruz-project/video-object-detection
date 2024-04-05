@@ -10,7 +10,7 @@ VERACRUZ_PATH="${VERACRUZ_PATH:-$HOME/veracruz}"
 POLICY_GENERATOR_PATH="${POLICY_GENERATOR_PATH:-$VERACRUZ_PATH/workspaces/host/target/$PROFILE/generate-policy}"
 CLIENT_PATH="${CLIENT_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-host/target/$PROFILE/veracruz-client}"
 SERVER_PATH="${SERVER_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-host/target/$PROFILE/$BACKEND-veracruz-server}"
-EIF_PATH="${EIF_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-runtime/runtime_manager.eif}"
+EIF_PATH="${EIF_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-runtime/nitro_runtime_manager.eif}"
 PCR0_PATH="${PCR0_PATH:-$VERACRUZ_PATH/workspaces/$BACKEND-runtime/PCR0}"
 
 # Attestation
@@ -63,7 +63,7 @@ RESULT_CLIENT_KEY_PATH="result_client_key.pem"
 
 POLICY_PATH="${POLICY_PATH:-policy.json}"
 
-PROXY_CLEANUP_SCRIPT_PATH="${PROXY_CLEANUP_SCRIPT_PATH:-$VERACRUZ_PATH/proxy_cleanup.sh}"
+PROXY_CLEANUP_SCRIPT_PATH="${PROXY_CLEANUP_SCRIPT_PATH:-$VERACRUZ_PATH/sdk/proxy_cleanup.sh}"
 
 NITRO_LOG="${NITRO_LOG:-nitro.log}"
 SERVER_LOG="${SERVER_LOG:-server.log}"
@@ -131,12 +131,12 @@ $POLICY_GENERATOR_PATH \
     --proxy-attestation-server-cert $CA_CERT_PATH \
     --veracruz-server-ip $VC_SERVER_ADDRESS:$VC_SERVER_PORT \
     --certificate-expiry "$(date --rfc-2822 -d 'now + 100 days')" \
-    --pcr-file $PCR0_PATH \
+    --pcr0-file $PCR0_PATH \
     --certificate "$PROGRAM_CLIENT_CERT_PATH => ./$PROGRAM_DIR/:w" \
     --certificate "$DATA_CLIENT_CERT_PATH => ./$PROGRAM_DATA_DIR/:w" \
     --certificate "$VIDEO_CLIENT_CERT_PATH => ./$VIDEO_INPUT_DIR/:w" \
     --certificate "$RESULT_CLIENT_CERT_PATH => ./$PROGRAM_DIR/:x,./$OUTPUT_DIR/:r" \
-    --program-binary "$PROGRAM_PATH_REMOTE=$PROGRAM_PATH_LOCAL => ./$PROGRAM_DATA_DIR/:r,./$VIDEO_INPUT_DIR/:r,./program_internal/:rw,./$OUTPUT_DIR/:w" \
+    --program-binary "$PROGRAM_PATH_REMOTE=$PROGRAM_PATH_LOCAL => ./$PROGRAM_DIR/:r,./$PROGRAM_DATA_DIR/:r,./$VIDEO_INPUT_DIR/:r,./program_internal/:rw,./$OUTPUT_DIR/:w" \
     --output-policy-file $POLICY_PATH || exit 1
 
 
